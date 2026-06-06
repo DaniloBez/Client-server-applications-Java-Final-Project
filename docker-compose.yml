@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  game-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DB_URL=jdbc:postgresql://${DB_HOST}:5432/${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "${SERVER_PORT}:10000"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
