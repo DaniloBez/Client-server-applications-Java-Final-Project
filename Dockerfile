@@ -4,14 +4,14 @@ WORKDIR /app
 COPY gradlew .
 COPY gradle gradle
 COPY build.gradle settings.gradle ./
-COPY shared-core/build.gradle shared-core/
+COPY shared/build.gradle shared/
 COPY server/build.gradle server/
 COPY client/build.gradle client/
 
 RUN chmod +x gradlew
 RUN ./gradlew dependencies --no-daemon
 
-COPY shared-core/src shared-core/src
+COPY shared/src shared/src
 COPY server/src server/src
 
 RUN ./gradlew :server:shadowJar -x test --no-daemon
