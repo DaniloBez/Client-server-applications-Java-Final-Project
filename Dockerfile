@@ -3,10 +3,10 @@ WORKDIR /app
 
 COPY gradlew .
 COPY gradle gradle
-COPY build.gradle settings.gradle ./
-COPY shared/build.gradle shared/
-COPY server/build.gradle server/
-COPY client/build.gradle client/
+COPY build.gradle.kts settings.gradle.kts ./
+COPY shared/build.gradle.kts shared/
+COPY server/build.gradle.kts server/
+COPY client/build.gradle.kts client/
 
 RUN chmod +x gradlew
 RUN ./gradlew dependencies --no-daemon
