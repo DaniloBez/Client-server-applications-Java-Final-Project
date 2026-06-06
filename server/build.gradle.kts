@@ -13,3 +13,7 @@ application {
 dependencies {
     implementation(project(":shared"))
 }
+
+tasks.shadowJar {
+    archiveFileName.set("server-all.jar")
+}
