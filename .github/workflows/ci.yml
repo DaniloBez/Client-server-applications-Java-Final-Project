@@ -47,7 +47,7 @@ jobs:
           DB_URL: jdbc:postgresql://localhost:5432/db
           DB_USER: admin
           DB_PASSWORD: super_secret_password
-        run: ./gradlew :shared-core:check :server:check
+        run: ./gradlew :shared:check :server:check
 
       - name: Verify Client Compilation
         run: ./gradlew :client:classes
@@ -59,7 +59,7 @@ jobs:
           name: test-reports
           path: |
             server/build/reports/tests/
-            shared-core/build/reports/tests/
+            shared/build/reports/tests/
           retention-days: 7
 
   docker-verify:
