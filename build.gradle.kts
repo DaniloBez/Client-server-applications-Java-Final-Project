@@ -13,6 +13,9 @@ subprojects {
         add("testImplementation", platform("org.junit:junit-bom:6.0.0"))
         add("testImplementation", "org.junit.jupiter:junit-jupiter")
         add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher")
+        add("compileOnly","org.projectlombok:lombok:1.18.46")
+        add("annotationProcessor","org.projectlombok:lombok:1.18.46")
+        add("implementation", "org.slf4j:slf4j-simple:2.0.17")
     }
 
     tasks.withType<Test> {

@@ -28,7 +28,7 @@
 2. **Налаштуйте змінні оточення:** Створіть файл `.env` на основі `.env.example`.
 3. **Запустіть систему:**
 ```bash
-docker compose -f docker-compose.dev.yml up -d 
+docker compose up -d 
 ```
 
 ## Локальний запуск
