@@ -15,7 +15,7 @@ subprojects {
         add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher")
         add("compileOnly","org.projectlombok:lombok:1.18.46")
         add("annotationProcessor","org.projectlombok:lombok:1.18.46")
-        add("implementation", "org.slf4j:slf4j-simple:2.0.17")
+        add("implementation", "org.slf4j:slf4j-simple:2.0.18")
     }
 
     tasks.withType<Test> {
