@@ -3,7 +3,7 @@ version = "1.0-SNAPSHOT"
 
 plugins {
     application
-    id("com.gradleup.shadow") version "8.3.5"
+    id("com.gradleup.shadow") version "9.4.2"
 }
 
 application {
