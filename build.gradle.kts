@@ -10,7 +10,7 @@ subprojects {
     }
 
     dependencies {
-        add("testImplementation", platform("org.junit:junit-bom:6.0.0"))
+        add("testImplementation", platform("org.junit:junit-bom:6.1.0"))
         add("testImplementation", "org.junit.jupiter:junit-jupiter")
         add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher")
         add("compileOnly","org.projectlombok:lombok:1.18.46")
