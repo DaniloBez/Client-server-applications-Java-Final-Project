@@ -32,15 +32,15 @@ public class DecryptorNode implements Runnable {
             while (!Thread.currentThread().isInterrupted()) {
                 NetworkMessage<byte[]> message = inputQueue.take();
 
-                if (message == ServerSignals.POISON_PILL_BYTES) {
+                if (message == ServerSignals.END_BYTES) {
                     log.info("DecryptorNode thread {} stopped", Thread.currentThread().getName());
 
                     if (activeEncryptorsCounter.decrementAndGet() == 0) {
                         log.info("The last decryptor has finished its work. "
                                 + "Passing the poison pill to the Processors.");
-                        outputQueue.put(ServerSignals.POISON_PILL_MSG);
+                        outputQueue.put(ServerSignals.END_MSG);
                     } else
-                        inputQueue.put(ServerSignals.POISON_PILL_BYTES);
+                        inputQueue.put(ServerSignals.END_BYTES);
 
                     break;
                 }

@@ -32,15 +32,15 @@ public class EncryptorNode implements Runnable {
             while (!Thread.currentThread().isInterrupted()) {
                 NetworkMessage<Message> message = inputQueue.take();
 
-                if (message == ServerSignals.POISON_PILL_MSG) {
+                if (message == ServerSignals.END_MSG) {
                     log.info("EncryptorNode thread {} stopped", Thread.currentThread().getName());
 
                     if (activeEncryptorsCounter.decrementAndGet() == 0) {
                         log.info("The last encryptor has finished its work. "
                                 + "Passing the poison pill to the Senders.");
-                        outputQueue.put(ServerSignals.POISON_PILL_BYTES);
+                        outputQueue.put(ServerSignals.END_BYTES);
                     } else
-                        inputQueue.put(ServerSignals.POISON_PILL_MSG);
+                        inputQueue.put(ServerSignals.END_MSG);
 
                     break;
                 }

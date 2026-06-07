@@ -34,20 +34,20 @@ public class ProcessorNode implements Runnable {
             while (!Thread.currentThread().isInterrupted()) {
                 NetworkMessage<Message> inputMessage = inputQueue.take();
 
-                if (inputMessage == ServerSignals.POISON_PILL_MSG) {
+                if (inputMessage == ServerSignals.END_MSG) {
                     log.info("ProcessorNode thread {} stopped", Thread.currentThread().getName());
 
                     if (activeProcessorsCounter.decrementAndGet() == 0) {
                         log.info("The last processor has finished its work."
                                 + " Passing the poison pill to the Encryptors.");
-                        outputQueue.put(ServerSignals.POISON_PILL_MSG);
+                        outputQueue.put(ServerSignals.END_MSG);
                     } else
-                        inputQueue.put(ServerSignals.POISON_PILL_MSG);
+                        inputQueue.put(ServerSignals.END_MSG);
 
                     break;
                 }
 
-                if (inputMessage.data() == ServerSignals.DISCONNECT_PILL_MSG) {
+                if (inputMessage.data() == ServerSignals.DISCONNECT_MSG) {
                     log.info(
                             "Processor cleaned up cache for dead client: {}",
                             inputMessage.connectionId()

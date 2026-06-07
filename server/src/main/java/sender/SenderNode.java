@@ -25,8 +25,8 @@ public class SenderNode implements Runnable {
             while (!Thread.currentThread().isInterrupted()) {
                 NetworkMessage<byte[]> message = inputQueue.take();
 
-                if (message == ServerSignals.POISON_PILL_BYTES) {
-                    inputQueue.put(ServerSignals.POISON_PILL_BYTES);
+                if (message == ServerSignals.END_BYTES) {
+                    inputQueue.put(ServerSignals.END_BYTES);
                     log.info("SenderNode thread {} stopped", Thread.currentThread().getName());
                     break;
                 }

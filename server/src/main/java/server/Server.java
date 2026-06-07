@@ -141,7 +141,7 @@ public class Server {
         log.info("Shutting down connections");
         connectionManager.closeAllConnections();
 
-        rawInputQueue.put(ServerSignals.POISON_PILL_BYTES);
+        rawInputQueue.put(ServerSignals.END_BYTES);
 
         executorService.shutdown();
 
