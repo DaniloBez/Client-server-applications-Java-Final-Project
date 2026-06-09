@@ -84,7 +84,12 @@ public class Main {
     }
 
     private static Server initServer() {
-        DbConnectionPool dbConnectionPool = new DbConnectionPool(10, url, user, password);
+        DbConnectionPool dbConnectionPool = new DbConnectionPool(
+                10,
+                url + "&stringtype=unspecified",
+                user,
+                password
+        );
 
         Decryptor serverDecryptor = new MessageDecryptor();
         MessageEncryptor serverEncryptor = new MessageEncryptor();

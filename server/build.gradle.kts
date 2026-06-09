@@ -18,6 +18,9 @@ dependencies {
     runtimeOnly("org.flywaydb:flyway-database-postgresql:12.8.1")
     runtimeOnly("org.postgresql:postgresql:42.7.11")
     testImplementation("org.assertj:assertj-core:4.0.0-M1")
+    testImplementation("org.testcontainers:testcontainers:2.0.5")
+    testImplementation("org.testcontainers:postgresql:1.21.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.4")
 }
 
 tasks.shadowJar {
