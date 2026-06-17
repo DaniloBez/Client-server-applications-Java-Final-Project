@@ -27,7 +27,7 @@ public class MatchRepository {
         this.dbConnectionPool = dbConnectionPool;
     }
 
-    public long create(long userId1, long userId2) {
+    public long create(int userId1, int userId2) {
         String sql = "INSERT INTO matches (player1_id, player2_id) VALUES (?, ?)";
         Connection connection = null;
 
@@ -37,8 +37,8 @@ public class MatchRepository {
                     sql,
                     Statement.RETURN_GENERATED_KEYS
             )) {
-                preparedStatement.setLong(1, userId1);
-                preparedStatement.setLong(2, userId2);
+                preparedStatement.setInt(1, userId1);
+                preparedStatement.setInt(2, userId2);
                 preparedStatement.executeUpdate();
 
                 try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
@@ -62,7 +62,7 @@ public class MatchRepository {
                 + "player1_score = ?, "
                 + "player2_score = ?, "
                 + "winner_id = ?, "
-                + "status = ?, "
+                + "status = ?::match_status, "
                 + "ended_at = CURRENT_TIMESTAMP "
                 + "WHERE id = ?";
 
@@ -70,8 +70,8 @@ public class MatchRepository {
         try {
             connection = dbConnectionPool.getConnection();
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-                preparedStatement.setLong(1, match.getUser1Id());
-                preparedStatement.setLong(2, match.getUser2Id());
+                preparedStatement.setInt(1, match.getUser1Id());
+                preparedStatement.setInt(2, match.getUser2Id());
                 preparedStatement.setInt(3, match.getUser1Score());
                 preparedStatement.setInt(4, match.getUser2Score());
                 preparedStatement.setObject(5, match.getWinnerId(), Types.BIGINT);
@@ -161,12 +161,12 @@ public class MatchRepository {
 
                         matches.add(new Match(
                                 resultSet.getLong("id"),
-                                resultSet.getLong("player1_id"),
-                                resultSet.getLong("player2_id"),
+                                resultSet.getInt("player1_id"),
+                                resultSet.getInt("player2_id"),
                                 resultSet.getInt("player1_score"),
                                 resultSet.getInt("player2_score"),
                                 resultSet.getObject("winner_id") != null
-                                        ? resultSet.getLong("winner_id")
+                                        ? resultSet.getInt("winner_id")
                                         : null,
                                 MatchStatus.valueOf(resultSet.getString("status")),
                                 resultSet.getTimestamp("started_at").toLocalDateTime(),

@@ -3,7 +3,8 @@ import decryptor.MessageDecryptor;
 import encryptor.MessageEncryptor;
 import java.util.Scanner;
 import org.flywaydb.core.Flyway;
-import processor.Processor;
+import repository.MatchRepository;
+import repository.UserRepository;
 import server.Server;
 import utils.DbConnectionPool;
 
@@ -86,14 +87,16 @@ public class Main {
     private static Server initServer() {
         DbConnectionPool dbConnectionPool = new DbConnectionPool(
                 10,
-                url + "&stringtype=unspecified",
+                url + "?stringtype=unspecified",
                 user,
                 password
         );
 
         Decryptor serverDecryptor = new MessageDecryptor();
         MessageEncryptor serverEncryptor = new MessageEncryptor();
-        Processor serverProcessor = new Processor();
+
+        UserRepository userRepository = new UserRepository(dbConnectionPool);
+        MatchRepository matchRepository = new MatchRepository(dbConnectionPool);
 
         return new Server(
                 5,
@@ -101,9 +104,10 @@ public class Main {
                 2,
                 serverEncryptor,
                 3,
-                serverProcessor,
                 4,
-                10000
+                10000,
+                userRepository,
+                matchRepository
         );
     }
 }

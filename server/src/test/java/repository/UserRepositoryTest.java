@@ -24,11 +24,33 @@ public class UserRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
+    void shouldGetUserById() {
+        String username = "test_user_by_id";
+        String passwordHash = "hash123";
+        int userId = userRepository.create(username, passwordHash);
+
+        Optional<User> foundUser = userRepository.getUser(userId);
+
+        assertTrue(foundUser.isPresent());
+        assertEquals(userId, foundUser.get().getId());
+        assertEquals(username, foundUser.get().getUsername());
+        assertEquals(1000, foundUser.get().getEloRating());
+        assertFalse(foundUser.get().isBanned());
+    }
+
+    @Test
+    void shouldReturnEmptyOptionalForUnknownId() {
+        Optional<User> foundUser = userRepository.getUser(99999);
+
+        assertTrue(foundUser.isEmpty());
+    }
+
+    @Test
     void shouldCreateAndFindUser() {
         String username = "player1";
         String passwordHash = "hashed_pass";
 
-        long userId = userRepository.create(username, passwordHash);
+        int userId = userRepository.create(username, passwordHash);
         Optional<User> foundUser = userRepository.findByUsername(username);
 
         assertTrue(userId > 0);
@@ -40,7 +62,7 @@ public class UserRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void shouldUpdateEloAndMatchCount() {
-        long userId = userRepository.create("player2", "pass");
+        int userId = userRepository.create("player2", "pass");
 
         userRepository.updateEloAndMatchCount(userId, 25);
         User updatedUser = userRepository.findByUsername("player2").orElseThrow();
@@ -51,7 +73,7 @@ public class UserRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void shouldSetBannedStatus() {
-        long userId = userRepository.create("hacker", "pass");
+        int userId = userRepository.create("hacker", "pass");
 
         userRepository.setBannedStatus(userId, true);
         User bannedUser = userRepository.findByUsername("hacker").orElseThrow();
@@ -91,7 +113,7 @@ public class UserRepositoryTest extends BaseRepositoryTest {
     void shouldThrowExceptionWhenUpdatingNonExistentUser() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> userRepository.updateEloAndMatchCount(9999L, 25)
+                () -> userRepository.updateEloAndMatchCount(9999, 25)
         );
 
         assertTrue(exception.getMessage().contains("was not found"));
@@ -114,8 +136,8 @@ public class UserRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void shouldFilterUsersByRoleAndElo() {
-        long noobId = userRepository.create("noob_player", "pass");
-        long proId = userRepository.create("pro_player", "pass");
+        userRepository.create("noob_player", "pass");
+        int proId = userRepository.create("pro_player", "pass");
 
         userRepository.updateEloAndMatchCount(proId, 500);
 

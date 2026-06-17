@@ -7,16 +7,24 @@ import dto.NetworkMessage;
 import encryptor.Encryptor;
 import encryptor.EncryptorNode;
 import encryptor.MessageEncryptor;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import processor.Processor;
 import processor.ProcessorNode;
+import repository.MatchRepository;
+import repository.UserRepository;
 import sender.SenderNode;
+import server.session.ConnectionManager;
+import server.session.SessionRegistry;
+import service.LobbyService;
+import service.game.GameManager;
 import utils.ServerSignals;
 
 @Slf4j
@@ -38,6 +46,8 @@ public class Server {
     private AtomicBoolean isTcpServerRun = new AtomicBoolean(false);
     private TcpServer tcpServer;
 
+    private final GameManager gameManager;
+    private final LobbyService lobbyService;
     private final Processor processor;
     private final Decryptor decryptor;
     private final Encryptor encryptor;
@@ -53,9 +63,10 @@ public class Server {
             int decryptorCount,
             MessageEncryptor encryptor,
             int encryptorCount,
-            Processor processor,
             int processorCount,
-            int port
+            int port,
+            UserRepository userRepository,
+            MatchRepository matchRepository
     ) {
         validate(senderCount, decryptorCount, encryptorCount, processorCount, port);
 
@@ -64,7 +75,20 @@ public class Server {
         this.decryptorCount = decryptorCount;
         this.encryptor = encryptor;
         this.encryptorCount = encryptorCount;
-        this.processor = processor;
+
+        Consumer<Message> asyncDispatcher = message -> {
+            String connId = SessionRegistry.getConnectionId(message.getUserId());
+            if (connId != null)
+                responseQueue.offer(new NetworkMessage<>(connId, message));
+        };
+
+        this.gameManager = new GameManager(userRepository, matchRepository);
+        this.gameManager.setMessageDispatcher(asyncDispatcher);
+
+        this.lobbyService = new LobbyService(this.gameManager);
+        this.lobbyService.setMessageDispatcher(asyncDispatcher);
+
+        this.processor = new Processor(this.lobbyService, this.gameManager);
         this.processorCount = processorCount;
 
         this.port = port;
@@ -101,6 +125,13 @@ public class Server {
     public void start() {
         log.info("Starting TCP Server");
         this.isTcpServerRun = new AtomicBoolean(true);
+        connectionManager.setMessageDispatcher(message -> {
+            String connId = SessionRegistry.getConnectionId(message.getUserId());
+            decodedQueue.offer(new NetworkMessage<>(
+                    Objects.requireNonNullElse(connId, ""),
+                    message)
+            );
+        });
         this.tcpServer = new TcpServer(port, connectionManager, isTcpServerRun, rawInputQueue);
         executorService.execute(tcpServer);
 
@@ -137,6 +168,10 @@ public class Server {
         isTcpServerRun.set(false);
         if (tcpServer != null)
             tcpServer.stop();
+
+        log.info("Shutting down game services");
+        gameManager.stop();
+        lobbyService.stop();
 
         log.info("Shutting down connections");
         connectionManager.closeAllConnections();

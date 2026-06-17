@@ -25,7 +25,30 @@ public class UserRepository {
         this.dbConnectionPool = dbConnectionPool;
     }
 
-    public long create(String username, String passwordHash) {
+    public Optional<User> getUser(int id) {
+        String sql = "SELECT * FROM users WHERE id = ?";
+        Connection connection = null;
+
+        try {
+            connection = dbConnectionPool.getConnection();
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                preparedStatement.setInt(1, id);
+
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    if (resultSet.next())
+                        return Optional.of(parse(resultSet));
+                    else
+                        return Optional.empty();
+                }
+            }
+        } catch (SQLException | InterruptedException e) {
+            throw new RuntimeException("Error finding user!", e);
+        } finally {
+            dbConnectionPool.releaseConnection(connection);
+        }
+    }
+
+    public int create(String username, String passwordHash) {
         String sql = "INSERT INTO users (username, password_hash) VALUES (?, ?)";
         Connection connection = null;
 
@@ -41,7 +64,7 @@ public class UserRepository {
 
                 try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
                     if (generatedKeys.next())
-                        return generatedKeys.getLong(1);
+                        return generatedKeys.getInt(1);
                     else
                         throw new SQLException("Creating user failed, no ID obtained.");
                 }
@@ -76,7 +99,7 @@ public class UserRepository {
         }
     }
 
-    public void updateEloAndMatchCount(long userId, int eloDelta) {
+    public void updateEloAndMatchCount(int userId, int eloDelta) {
         String sql = "UPDATE users SET "
                 + "match_count = match_count + 1, "
                 + "elo_rating = elo_rating + ? "
@@ -87,7 +110,7 @@ public class UserRepository {
             connection = dbConnectionPool.getConnection();
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
                 preparedStatement.setInt(1, eloDelta);
-                preparedStatement.setLong(2, userId);
+                preparedStatement.setInt(2, userId);
 
                 int rowsAffected = preparedStatement.executeUpdate();
 
@@ -112,7 +135,7 @@ public class UserRepository {
         SqlQueryBuilder countBuilder = new SqlQueryBuilder("SELECT COUNT(*) FROM users");
 
         if (filter != null) {
-            dataBuilder.whereILike("username", filter.nameLike())
+            dataBuilder.whereIlike("username", filter.nameLike())
                     .whereEqual("role", filter.userRole())
                     .whereEqual("is_banned", filter.isBanned())
                     .whereGreaterOrEqual("elo_rating", filter.minElo())
@@ -122,7 +145,7 @@ public class UserRepository {
                     .whereGreaterOrEqual("created_at", filter.createdAtFrom())
                     .whereLessOrEqual("created_at", filter.createdAtTo());
 
-            countBuilder.whereILike("username", filter.nameLike())
+            countBuilder.whereIlike("username", filter.nameLike())
                     .whereEqual("role", filter.userRole())
                     .whereEqual("is_banned", filter.isBanned())
                     .whereGreaterOrEqual("elo_rating", filter.minElo())
@@ -222,7 +245,7 @@ public class UserRepository {
 
     private User parse(ResultSet resultSet) throws SQLException {
         return new User(
-                resultSet.getLong("id"),
+                resultSet.getInt("id"),
                 resultSet.getString("username"),
                 resultSet.getString("password_hash"),
                 UserRole.valueOf(resultSet.getString("role")),

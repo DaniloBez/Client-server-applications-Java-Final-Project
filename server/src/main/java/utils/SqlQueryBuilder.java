@@ -111,8 +111,8 @@ public class SqlQueryBuilder {
         return this;
     }
 
-    public SqlQueryBuilder whereILike(String column, String value) {
-        if (value != null && !value.trim().isEmpty()) {
+    public SqlQueryBuilder whereIlike(String column, String value) {
+        if (value != null && !value.isEmpty()) {
             whereClauses.add(column + " ILIKE ?");
             whereParams.add("%" + value + "%");
         }
@@ -143,7 +143,6 @@ public class SqlQueryBuilder {
                 whereParams.add(value);
             }
             placeholders.deleteCharAt(placeholders.length() - 1);
-
             whereClauses.add(column + " IN (" + placeholders + ")");
         }
         return this;
@@ -157,7 +156,6 @@ public class SqlQueryBuilder {
                 whereParams.add(value);
             }
             placeholders.deleteCharAt(placeholders.length() - 1);
-
             whereClauses.add(column + " NOT IN (" + placeholders + ")");
         }
         return this;
@@ -195,10 +193,8 @@ public class SqlQueryBuilder {
         return this;
     }
 
-
     public String getSql() {
         StringBuilder finalSql = new StringBuilder(baseQuery);
-
         if (!whereClauses.isEmpty()) {
             if (baseQuery.toUpperCase().contains("WHERE"))
                 finalSql.append(" AND ");
