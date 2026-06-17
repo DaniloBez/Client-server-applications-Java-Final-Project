@@ -19,8 +19,8 @@ class MatchRepositoryTest extends BaseRepositoryTest {
     private MatchRepository matchRepository;
     private UserRepository userRepository;
 
-    private long player1Id;
-    private long player2Id;
+    private int player1Id;
+    private int player2Id;
 
     @BeforeEach
     void setUp() {
@@ -66,10 +66,10 @@ class MatchRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void shouldFindAllMatchesByUserIdOrStatus() {
-        long anotherPlayerId = userRepository.create("another", "pass");
+        int anotherPlayerId = userRepository.create("another", "pass");
 
         long match1Id = matchRepository.create(player1Id, player2Id);
-        long match2Id = matchRepository.create(player1Id, anotherPlayerId);
+        matchRepository.create(player1Id, anotherPlayerId);
 
         Match m1 = new Match(
                 match1Id,
@@ -77,9 +77,7 @@ class MatchRepositoryTest extends BaseRepositoryTest {
                 player2Id,
                 0,
                 0, player1Id,
-                MatchStatus.TECHNICAL_WIN,
-                null,
-                null
+                MatchStatus.TECHNICAL_WIN
         );
         matchRepository.save(m1);
 
@@ -129,7 +127,7 @@ class MatchRepositoryTest extends BaseRepositoryTest {
     @Test
     void shouldFilterMatchesByStatus() {
         long match1Id = matchRepository.create(player1Id, player2Id);
-        long match2Id = matchRepository.create(player1Id, player2Id);
+        matchRepository.create(player1Id, player2Id);
 
         Match m1 = new Match(
                 match1Id, player1Id, player2Id, 3, 1, player1Id, MatchStatus.COMPLETED
