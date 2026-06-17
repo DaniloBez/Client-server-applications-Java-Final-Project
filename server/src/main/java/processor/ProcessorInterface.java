@@ -1,8 +1,9 @@
 package processor;
 
 import dto.Message;
+import dto.NetworkMessage;
 import java.util.List;
 
 public interface ProcessorInterface {
-    List<Message> process(Message message);
+    List<Message> process(NetworkMessage<Message> message);
 }

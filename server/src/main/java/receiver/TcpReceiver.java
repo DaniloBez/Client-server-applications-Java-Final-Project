@@ -7,7 +7,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedTransferQueue;
 import lombok.extern.slf4j.Slf4j;
-import server.ConnectionManager;
+import server.session.ConnectionManager;
 
 @Slf4j
 public class TcpReceiver implements Runnable {

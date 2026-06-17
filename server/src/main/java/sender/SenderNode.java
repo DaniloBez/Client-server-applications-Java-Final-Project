@@ -3,7 +3,7 @@ package sender;
 import dto.NetworkMessage;
 import java.util.concurrent.BlockingQueue;
 import lombok.extern.slf4j.Slf4j;
-import server.ConnectionManager;
+import server.session.ConnectionManager;
 import utils.ServerSignals;
 
 @Slf4j

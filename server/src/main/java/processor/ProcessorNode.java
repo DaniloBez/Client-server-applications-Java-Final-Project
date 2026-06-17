@@ -1,11 +1,13 @@
 package processor;
 
+import dto.Commands;
 import dto.Message;
 import dto.NetworkMessage;
 import java.util.List;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
+import server.session.SessionRegistry;
 import utils.ServerSignals;
 
 @Slf4j
@@ -49,21 +51,37 @@ public class ProcessorNode implements Runnable {
 
                 if (inputMessage.data() == ServerSignals.DISCONNECT_MSG) {
                     log.info(
-                            "Processor cleaned up cache for dead client: {}",
+                            "Processor handling disconnect for dead client: {}",
                             inputMessage.connectionId()
                     );
+
+                    Integer disconnectedUserId = SessionRegistry.getUserId(
+                            inputMessage.connectionId()
+                    );
+
+                    if (disconnectedUserId != null) {
+                        Message disconnectMsg = new Message(
+                                (byte) 0,
+                                0,
+                                Commands.PLAYER_DISCONNECTED,
+                                disconnectedUserId,
+                                ""
+                        );
+
+                        NetworkMessage<Message> netMsg = new NetworkMessage<>(
+                                inputMessage.connectionId(),
+                                disconnectMsg
+                        );
+
+                        List<Message> disconnectResults = processor.process(netMsg);
+                        routeMessages(disconnectResults);
+                    }
+                    SessionRegistry.remove(inputMessage.connectionId());
                     continue;
                 }
 
-                List<Message> resultMessages = processor.process(inputMessage.data());
-
-                for (Message message : resultMessages) {
-                    NetworkMessage<Message> outputMessage = new NetworkMessage<>(
-                            inputMessage.connectionId(),
-                            message
-                    );
-                    outputQueue.put(outputMessage);
-                }
+                List<Message> resultMessages = processor.process(inputMessage);
+                routeMessages(resultMessages);
             }
         } catch (InterruptedException e) {
             log.info(
@@ -72,6 +90,19 @@ public class ProcessorNode implements Runnable {
                     e.getMessage()
             );
             Thread.currentThread().interrupt();
+        }
+    }
+
+    private void routeMessages(List<Message> messages) throws InterruptedException {
+        for (Message message : messages) {
+            String targetConnId = SessionRegistry.getConnectionId(message.getUserId());
+            if (targetConnId != null) {
+                NetworkMessage<Message> outputMessage = new NetworkMessage<>(
+                        targetConnId,
+                        message
+                );
+                outputQueue.put(outputMessage);
+            }
         }
     }
 }
