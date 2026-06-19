@@ -6,34 +6,37 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import java.lang.reflect.Field;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import service.game.GameConstant;
+import service.game.GameSession;
+import service.game.MoveResult;
 
 public class GameSessionTest {
-    private service.GameSession session;
-    private final long p1 = 10L;
-    private final long p2 = 20L;
+    private GameSession session;
+    private final int player1 = 10;
+    private final int player2 = 20;
 
     @BeforeEach
     void setUp() {
-        session = new service.GameSession(1L, p1, p2);
+        session = new GameSession(1L, player1, player2);
     }
 
-    private long getActivePlayer() throws Exception {
-        Field field = service.GameSession.class.getDeclaredField("isFirstPlayerMove");
+    private int getActivePlayer() throws Exception {
+        Field field = GameSession.class.getDeclaredField("isFirstPlayerMove");
         field.setAccessible(true);
         boolean isFirst = (boolean) field.get(session);
-        return isFirst ? p1 : p2;
+        return isFirst ? player1 : player2;
     }
 
-    private long getWaitingPlayer() throws Exception {
-        return getActivePlayer() == p1 ? p2 : p1;
+    private int getWaitingPlayer() throws Exception {
+        return getActivePlayer() == player1 ? player2 : player1;
     }
 
     @Test
     void shouldRejectInvalidMoves() throws Exception {
-        long active = getActivePlayer();
-        long waiting = getWaitingPlayer();
+        int active = getActivePlayer();
+        int waiting = getWaitingPlayer();
 
-        assertEquals(MoveResult.INVALID, session.processMove(999L, (byte) 0, (byte) 0));
+        assertEquals(MoveResult.INVALID, session.processMove(999, (byte) 0, (byte) 0));
 
         assertEquals(MoveResult.INVALID, session.processMove(waiting, (byte) 0, (byte) 0));
 
@@ -46,8 +49,8 @@ public class GameSessionTest {
 
     @Test
     void shouldRegisterValidMoveAndSwapTurn() throws Exception {
-        long firstToMove = getActivePlayer();
-        long secondToMove = getWaitingPlayer();
+        int firstToMove = getActivePlayer();
+        int secondToMove = getWaitingPlayer();
 
         MoveResult result = session.processMove(firstToMove, (byte) 0, (byte) 0);
         assertEquals(MoveResult.SUCCESS, result);
@@ -59,17 +62,17 @@ public class GameSessionTest {
 
     @Test
     void shouldDetectRoundWin() throws Exception {
-        long px = getActivePlayer();
-        long po = getWaitingPlayer();
+        int playerX = getActivePlayer();
+        int playerO = getWaitingPlayer();
 
-        assertEquals(MoveResult.SUCCESS, session.processMove(px, (byte) 0, (byte) 0));
-        assertEquals(MoveResult.SUCCESS, session.processMove(po, (byte) 0, (byte) 1));
-        assertEquals(MoveResult.SUCCESS, session.processMove(px, (byte) 1, (byte) 0));
-        assertEquals(MoveResult.SUCCESS, session.processMove(po, (byte) 1, (byte) 1));
+        assertEquals(MoveResult.SUCCESS, session.processMove(playerX, (byte) 0, (byte) 0));
+        assertEquals(MoveResult.SUCCESS, session.processMove(playerO, (byte) 0, (byte) 1));
+        assertEquals(MoveResult.SUCCESS, session.processMove(playerX, (byte) 1, (byte) 0));
+        assertEquals(MoveResult.SUCCESS, session.processMove(playerO, (byte) 1, (byte) 1));
 
-        assertEquals(MoveResult.ROUND_WIN, session.processMove(px, (byte) 2, (byte) 0));
+        assertEquals(MoveResult.ROUND_WIN, session.processMove(playerX, (byte) 2, (byte) 0));
 
-        if (px == p1)
+        if (playerX == player1)
             assertEquals(1, session.getPlayer1Score());
         else
             assertEquals(1, session.getPlayer2Score());
@@ -77,19 +80,19 @@ public class GameSessionTest {
 
     @Test
     void shouldDetectDraw() throws Exception {
-        long px = getActivePlayer();
-        long po = getWaitingPlayer();
+        int playerX = getActivePlayer();
+        int playerO = getWaitingPlayer();
 
-        session.processMove(px, (byte) 0, (byte) 0);
-        session.processMove(po, (byte) 0, (byte) 1);
-        session.processMove(px, (byte) 0, (byte) 2);
-        session.processMove(po, (byte) 1, (byte) 1);
-        session.processMove(px, (byte) 1, (byte) 0);
-        session.processMove(po, (byte) 1, (byte) 2);
-        session.processMove(px, (byte) 2, (byte) 1);
-        session.processMove(po, (byte) 2, (byte) 0);
+        session.processMove(playerX, (byte) 0, (byte) 0);
+        session.processMove(playerO, (byte) 0, (byte) 1);
+        session.processMove(playerX, (byte) 0, (byte) 2);
+        session.processMove(playerO, (byte) 1, (byte) 1);
+        session.processMove(playerX, (byte) 1, (byte) 0);
+        session.processMove(playerO, (byte) 1, (byte) 2);
+        session.processMove(playerX, (byte) 2, (byte) 1);
+        session.processMove(playerO, (byte) 2, (byte) 0);
 
-        assertEquals(MoveResult.DRAW, session.processMove(px, (byte) 2, (byte) 2));
+        assertEquals(MoveResult.DRAW, session.processMove(playerX, (byte) 2, (byte) 2));
 
         assertEquals(0, session.getPlayer1Score());
         assertEquals(0, session.getPlayer2Score());
@@ -97,7 +100,7 @@ public class GameSessionTest {
 
     @Test
     void shouldDetectMatchWinAfterThreeRounds() throws Exception {
-        long champion = getActivePlayer();
+        int champion = getActivePlayer();
 
         playActivePlayerWins(champion, getWaitingPlayer());
         assertEquals(MoveResult.ROUND_WIN, session.processMove(champion, (byte) 2, (byte) 0));
@@ -119,32 +122,32 @@ public class GameSessionTest {
     void shouldDetectMatchEndAfterFiveRounds() throws Exception {
 
         for (int i = 0; i < 4; i++) {
-            long active = getActivePlayer();
-            long waiting = getWaitingPlayer();
+            int active = getActivePlayer();
+            int waiting = getWaitingPlayer();
 
             playActivePlayerWins(active, waiting);
             assertEquals(MoveResult.ROUND_WIN, session.processMove(active, (byte) 2, (byte) 0));
             session.resetBoard();
         }
 
-        long px = getActivePlayer();
-        long po = getWaitingPlayer();
+        int playerX = getActivePlayer();
+        int playerO = getWaitingPlayer();
 
-        session.processMove(px, (byte) 0, (byte) 0);
-        session.processMove(po, (byte) 0, (byte) 1);
-        session.processMove(px, (byte) 0, (byte) 2);
-        session.processMove(po, (byte) 1, (byte) 1);
-        session.processMove(px, (byte) 1, (byte) 0);
-        session.processMove(po, (byte) 1, (byte) 2);
-        session.processMove(px, (byte) 2, (byte) 1);
-        session.processMove(po, (byte) 2, (byte) 0);
+        session.processMove(playerX, (byte) 0, (byte) 0);
+        session.processMove(playerO, (byte) 0, (byte) 1);
+        session.processMove(playerX, (byte) 0, (byte) 2);
+        session.processMove(playerO, (byte) 1, (byte) 1);
+        session.processMove(playerX, (byte) 1, (byte) 0);
+        session.processMove(playerO, (byte) 1, (byte) 2);
+        session.processMove(playerX, (byte) 2, (byte) 1);
+        session.processMove(playerO, (byte) 2, (byte) 0);
 
-        assertEquals(MoveResult.MATCH_END, session.processMove(px, (byte) 2, (byte) 2));
+        assertEquals(MoveResult.MATCH_END, session.processMove(playerX, (byte) 2, (byte) 2));
     }
 
     @Test
     void shouldResetBoardAndSwapStarter() throws Exception {
-        long initialStarter = getActivePlayer();
+        int initialStarter = getActivePlayer();
 
         session.processMove(initialStarter, (byte) 1, (byte) 1);
         assertNotEquals(GameConstant.EMPTY_CELL, session.getMap()[1][1]);
@@ -153,18 +156,18 @@ public class GameSessionTest {
 
         assertEquals(GameConstant.EMPTY_CELL, session.getMap()[1][1]);
 
-        long newStarter = getActivePlayer();
+        int newStarter = getActivePlayer();
         assertNotEquals(initialStarter, newStarter);
     }
 
-    private void playActivePlayerWins(long active, long waiting) {
+    private void playActivePlayerWins(int active, int waiting) {
         session.processMove(active, (byte) 0, (byte) 0);
         session.processMove(waiting, (byte) 0, (byte) 1);
         session.processMove(active, (byte) 1, (byte) 0);
         session.processMove(waiting, (byte) 1, (byte) 1);
     }
 
-    private void playWaitingPlayerWins(long active, long waiting) {
+    private void playWaitingPlayerWins(int active, int waiting) {
         session.processMove(active, (byte) 0, (byte) 0);
         session.processMove(waiting, (byte) 1, (byte) 0);
         session.processMove(active, (byte) 0, (byte) 1);

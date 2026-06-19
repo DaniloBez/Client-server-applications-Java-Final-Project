@@ -13,8 +13,11 @@ public class Main {
     private static boolean isRunning = false;
 
     private static final String url = System.getenv("DB_URL");
-    private static final  String user = System.getenv("DB_USER");
+    private static final String user = System.getenv("DB_USER");
     private static final String password = System.getenv("DB_PASSWORD");
+    private static final String jwtSecret = System.getenv("JWT_SECRET");
+    private static final String httpPortStr = System.getenv("HTTP_PORT");
+    private static final String tcpPortStr = System.getenv("TCP_PORT");
 
     public static void main(String[] args) {
         migrate();
@@ -98,6 +101,10 @@ public class Main {
         UserRepository userRepository = new UserRepository(dbConnectionPool);
         MatchRepository matchRepository = new MatchRepository(dbConnectionPool);
 
+        int tcpPort = tcpPortStr != null ? Integer.parseInt(tcpPortStr) : 10000;
+        int httpPort = httpPortStr != null ? Integer.parseInt(httpPortStr) : 8080;
+        String secret = jwtSecret != null ? jwtSecret : "fallback-secret";
+
         return new Server(
                 5,
                 serverDecryptor,
@@ -105,7 +112,9 @@ public class Main {
                 serverEncryptor,
                 3,
                 4,
-                10000,
+                tcpPort,
+                httpPort,
+                secret,
                 userRepository,
                 matchRepository
         );
