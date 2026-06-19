@@ -70,4 +70,8 @@ public class AuthService {
             return -1;
         }
     }
+
+    public Optional<User> getUser(int userId) {
+        return userRepository.getUser(userId);
+    }
 }

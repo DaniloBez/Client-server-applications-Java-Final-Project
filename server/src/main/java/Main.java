@@ -2,6 +2,7 @@ import decryptor.Decryptor;
 import decryptor.MessageDecryptor;
 import encryptor.MessageEncryptor;
 import java.util.Scanner;
+import java.util.TimeZone;
 import org.flywaydb.core.Flyway;
 import repository.MatchRepository;
 import repository.UserRepository;
@@ -20,6 +21,7 @@ public class Main {
     private static final String tcpPortStr = System.getenv("TCP_PORT");
 
     public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         migrate();
         autoStartServer();
 

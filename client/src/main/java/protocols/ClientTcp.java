@@ -1,3 +1,5 @@
+package protocols;
+
 import decryptor.Decryptor;
 import dto.Message;
 import encryptor.Encryptor;
@@ -63,7 +65,7 @@ public class ClientTcp implements Client {
             if (socket != null && !socket.isClosed())
                 socket.close();
 
-            log.info("TCP Client socket closed");
+            log.info("TCP protocols.Client socket closed");
         } catch (IOException e) {
             log.error("Error while closing client socket", e);
         }

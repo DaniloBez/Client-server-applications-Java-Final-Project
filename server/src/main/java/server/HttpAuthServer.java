@@ -5,10 +5,13 @@ import com.sun.net.httpserver.HttpServer;
 import dto.request.UserRequest;
 import dto.response.ErrorResponse;
 import dto.response.JwtTokenResponse;
+import dto.response.UserResponse;
+import entity.User;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import lombok.extern.slf4j.Slf4j;
 import service.AuthService;
@@ -34,6 +37,7 @@ public class HttpAuthServer {
             
             httpServer.createContext("/login", this::loginHandler);
             httpServer.createContext("/register", this::registerHandler);
+            httpServer.createContext("/user", this::userHandler);
             
             httpServer.start();
         } catch (IOException e) {
@@ -113,6 +117,58 @@ public class HttpAuthServer {
             sendError(exchange, 409, e.getMessage());
         } catch (Exception e) {
             log.error("Error processing registration", e);
+            sendError(exchange, 400, "Bad Request");
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void userHandler(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equals("GET")) {
+            exchange.sendResponseHeaders(405, -1);
+            exchange.close();
+            return;
+        }
+
+        try {
+            String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                sendError(exchange, 401, "Missing or invalid Authorization header");
+                return;
+            }
+
+            String token = authHeader.substring(7);
+            int userId = authService.verify(token);
+
+            if (userId == -1) {
+                sendError(exchange, 401, "Invalid token");
+                return;
+            }
+
+            Optional<User> userOptional = authService.getUser(userId);
+            if (userOptional.isEmpty()) {
+                sendError(exchange, 404, "User not found");
+                return;
+            }
+
+            User user = userOptional.get();
+            UserResponse response = new UserResponse(
+                    user.getId(),
+                    user.getUsername(),
+                    user.getMatchCount(),
+                    user.getEloRating(),
+                    user.getRole().name()
+            );
+
+            byte[] responseBytes = mapper.writeValueAsBytes(response);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, responseBytes.length);
+
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(responseBytes);
+            }
+        } catch (Exception e) {
+            log.error("Error processing user request", e);
             sendError(exchange, 400, "Bad Request");
         } finally {
             exchange.close();
