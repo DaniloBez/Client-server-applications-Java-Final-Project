@@ -9,13 +9,17 @@ import dto.Commands;
 import dto.Message;
 import dto.request.AuthConnectionRequest;
 import dto.request.PlayerMoveRequest;
+import dto.request.UserRequest;
+import dto.response.JwtTokenResponse;
 import dto.response.MatchEndedResponse;
 import dto.response.MatchFoundResponse;
 import dto.response.RoundEndedResponse;
 import encryptor.MessageEncryptor;
 import java.net.InetAddress;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -70,29 +74,6 @@ public class EndToEndGameTest {
                 postgresContainer.getPassword()
         );
 
-        try (
-                Connection conn = dbConnectionPool.getConnection();
-                PreparedStatement ps = conn.prepareStatement("INSERT INTO users "
-                        + "(username, password_hash, role, match_count, "
-                        + "elo_rating, is_banned) VALUES (?, ?, ?::user_role, ?, ?, ?)")
-        ) {
-            ps.setString(1, "Player1");
-            ps.setString(2, "hash");
-            ps.setString(3, "PLAYER");
-            ps.setInt(4, 0);
-            ps.setInt(5, 1000);
-            ps.setBoolean(6, false);
-            ps.executeUpdate();
-
-            ps.setString(1, "Player2");
-            ps.setString(2, "hash");
-            ps.setString(3, "PLAYER");
-            ps.setInt(4, 0);
-            ps.setInt(5, 1000);
-            ps.setBoolean(6, false);
-            ps.executeUpdate();
-        }
-
         UserRepository userRepository = new UserRepository(dbConnectionPool);
         MatchRepository matchRepository = new MatchRepository(dbConnectionPool);
 
@@ -104,6 +85,8 @@ public class EndToEndGameTest {
                 2,
                 4,
                 8081,
+                8080,
+                "test-secret",
                 userRepository,
                 matchRepository
         );
@@ -143,8 +126,11 @@ public class EndToEndGameTest {
 
         Thread.sleep(1000);
 
+        String token1 = registerAndLogin("Player1", "pass1");
+        String token2 = registerAndLogin("Player2", "pass2");
+
         String player1AuthPayload = mapper.writeValueAsString(
-                new AuthConnectionRequest(1, "fake_token")
+                new AuthConnectionRequest(1, token1)
         );
         player1Client.sendCommand(
                 new Message((byte) 1, 100L, Commands.AUTH_CONNECTION, 1, player1AuthPayload)
@@ -152,9 +138,10 @@ public class EndToEndGameTest {
 
         Message player1AuthResponse = expectMessage(player1Messages, Commands.AUTH_CONNECTION);
         assertNotNull(player1AuthResponse, "Player1 should receive auth response");
+        int user1 = player1AuthResponse.getUserId();
 
         String player2AuthPayload = mapper.writeValueAsString(
-                new AuthConnectionRequest(2, "fake_token")
+                new AuthConnectionRequest(2, token2)
         );
         player2Client.sendCommand(
                 new Message((byte) 1, 101L, Commands.AUTH_CONNECTION, 2, player2AuthPayload)
@@ -162,15 +149,16 @@ public class EndToEndGameTest {
 
         Message player2AuthResponse = expectMessage(player2Messages, Commands.AUTH_CONNECTION);
         assertNotNull(player2AuthResponse, "Player2 should receive auth response");
+        int user2 = player2AuthResponse.getUserId();
 
-        player1Client.sendCommand(new Message((byte) 1, 102L, Commands.JOIN_LOBBY, 1, ""));
-        player2Client.sendCommand(new Message((byte) 1, 103L, Commands.JOIN_LOBBY, 2, ""));
+        player1Client.sendCommand(new Message((byte) 1, 102L, Commands.JOIN_LOBBY, user1, ""));
+        player2Client.sendCommand(new Message((byte) 1, 103L, Commands.JOIN_LOBBY, user2, ""));
 
-        Message p1JoinResp = expectMessage(player1Messages, Commands.JOIN_LOBBY);
-        assertNotNull(p1JoinResp, "Player1 should receive join lobby response");
+        Message player1JoinResponse = expectMessage(player1Messages, Commands.JOIN_LOBBY);
+        assertNotNull(player1JoinResponse, "Player1 should receive join lobby response");
 
-        Message p2JoinResp = expectMessage(player2Messages, Commands.JOIN_LOBBY);
-        assertNotNull(p2JoinResp, "Player2 should receive join lobby response");
+        Message player2JoinResponse = expectMessage(player2Messages, Commands.JOIN_LOBBY);
+        assertNotNull(player2JoinResponse, "Player2 should receive join lobby response");
 
         Message p1Match = expectMessage(player1Messages, Commands.MATCH_FOUND);
         assertNotNull(p1Match, "Player1 should receive match found");
@@ -195,15 +183,15 @@ public class EndToEndGameTest {
             nextTurnClient = player2Client;
             currentQueue = player1Messages;
             nextQueue = player2Messages;
-            currentUserId = 1;
-            nextUserId = 2;
+            currentUserId = user1;
+            nextUserId = user2;
         } else {
             currentTurnClient = player2Client;
             nextTurnClient = player1Client;
             currentQueue = player2Messages;
             nextQueue = player1Messages;
-            currentUserId = 2;
-            nextUserId = 1;
+            currentUserId = user2;
+            nextUserId = user1;
         }
 
         // ROUND 1
@@ -435,5 +423,100 @@ public class EndToEndGameTest {
         }
         fail("Did not receive command ID: " + expectedCommandId);
         return null;
+    }
+
+    @Test
+    public void testTechnicalDefeatByDisconnect() throws Exception {
+        LinkedBlockingQueue<Message> player1Messages = new LinkedBlockingQueue<>();
+        LinkedBlockingQueue<Message> player2Messages = new LinkedBlockingQueue<>();
+
+        ClientTcp player1Client = new ClientTcp(
+                new MessageEncryptor(),
+                new MessageDecryptor(),
+                player1Messages::offer
+        );
+
+        ClientTcp player2Client = new ClientTcp(
+                new MessageEncryptor(),
+                new MessageDecryptor(),
+                player2Messages::offer
+        );
+
+        player1Client.connect(InetAddress.getByName("localhost"), 8081);
+        player2Client.connect(InetAddress.getByName("localhost"), 8081);
+        Thread.sleep(1000);
+
+        String token1 = registerAndLogin("TechPlayer1", "pass");
+        String token2 = registerAndLogin("TechPlayer2", "pass");
+
+        player1Client.sendCommand(new Message(
+                (byte) 1,
+                200L,
+                Commands.AUTH_CONNECTION,
+                1,
+                mapper.writeValueAsString(new AuthConnectionRequest(1, token1))
+        ));
+        Message player1AuthResponse = expectMessage(player1Messages, Commands.AUTH_CONNECTION);
+        assertNotNull(player1AuthResponse);
+        int user1 = player1AuthResponse.getUserId();
+
+        player2Client.sendCommand(new Message(
+                (byte) 1,
+                201L,
+                Commands.AUTH_CONNECTION,
+                2,
+                mapper.writeValueAsString(new AuthConnectionRequest(2, token2))
+        ));
+        Message player2AuthResponse = expectMessage(player2Messages, Commands.AUTH_CONNECTION);
+        assertNotNull(player2AuthResponse);
+        int user2 = player2AuthResponse.getUserId();
+
+        player1Client.sendCommand(new Message((byte) 1, 202L, Commands.JOIN_LOBBY, user1, ""));
+        player2Client.sendCommand(new Message((byte) 1, 203L, Commands.JOIN_LOBBY, user2, ""));
+
+        expectMessage(player1Messages, Commands.JOIN_LOBBY);
+        expectMessage(player2Messages, Commands.JOIN_LOBBY);
+
+        expectMessage(player1Messages, Commands.MATCH_FOUND);
+        expectMessage(player2Messages, Commands.MATCH_FOUND);
+
+        player1Client.disconnect();
+
+        Message p2EndMessage = expectMessage(player2Messages, Commands.MATCH_ENDED);
+        assertNotNull(p2EndMessage, "P2 should receive MATCH_ENDED after opponent disconnects");
+
+        MatchEndedResponse p2EndData = mapper.readValue(
+                p2EndMessage.getData(), MatchEndedResponse.class
+        );
+        assertTrue(p2EndData.isYouWinner(), "Player 2 should win by technical defeat");
+
+        player2Client.disconnect();
+    }
+
+    private String registerAndLogin(String username, String password) throws Exception {
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            UserRequest req = new UserRequest(username, password);
+            String body = mapper.writeValueAsString(req);
+
+            HttpRequest registerRequest = HttpRequest.newBuilder()
+                    .uri(new URI("http://localhost:8080/register"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            client.send(registerRequest, HttpResponse.BodyHandlers.ofString());
+
+            HttpRequest loginRequest = HttpRequest.newBuilder()
+                    .uri(new URI("http://localhost:8080/login"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            HttpResponse<String> loginResp = client.send(
+                    loginRequest, HttpResponse.BodyHandlers.ofString()
+            );
+
+            JwtTokenResponse tokenResp = mapper.readValue(loginResp.body(), JwtTokenResponse.class);
+            return tokenResp.token();
+
+        }
     }
 }

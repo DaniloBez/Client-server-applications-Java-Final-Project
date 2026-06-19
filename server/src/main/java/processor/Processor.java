@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import server.session.SessionRegistry;
+import service.AuthService;
 import service.LobbyService;
 import service.game.GameManager;
 import tools.jackson.databind.DeserializationFeature;
@@ -24,10 +25,12 @@ public class Processor implements ProcessorInterface {
     private final JsonMapper mapper;
     private final LobbyService lobbyService;
     private final GameManager gameManager;
+    private final AuthService authService;
 
-    public Processor(LobbyService lobbyService, GameManager gameManager) {
+    public Processor(LobbyService lobbyService, GameManager gameManager, AuthService authService) {
         this.lobbyService = lobbyService;
         this.gameManager = gameManager;
+        this.authService = authService;
         
         mapper = JsonMapper.builder()
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -53,8 +56,22 @@ public class Processor implements ProcessorInterface {
                     message.getData(),
                     AuthConnectionRequest.class
             );
-            // TODO: validate JWT token from request.token()
-            SessionRegistry.registerUser(request.userId(), netMessage.connectionId());
+            
+            int userId = authService.verify(request.token());
+            if (userId == -1) {
+                log.warn(
+                        "Invalid JWT token during TCP auth from connection {}",
+                        netMessage.connectionId()
+                );
+                return List.of(buildErrorMessage(
+                        message,
+                        401,
+                        "Unauthorized",
+                        "Invalid token"
+                ));
+            }
+
+            SessionRegistry.registerUser(userId, netMessage.connectionId());
             
             SuccessResponse response = new SuccessResponse(
                     "Authenticated", 
@@ -66,7 +83,7 @@ public class Processor implements ProcessorInterface {
                     message.getClientApplicationId(),
                     message.getMessageId(),
                     Commands.AUTH_CONNECTION,
-                    request.userId(),
+                    userId,
                     jsonPayload
             ));
         } catch (Exception e) {

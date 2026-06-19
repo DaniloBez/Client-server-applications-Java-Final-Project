@@ -23,6 +23,7 @@ import repository.UserRepository;
 import sender.SenderNode;
 import server.session.ConnectionManager;
 import server.session.SessionRegistry;
+import service.AuthService;
 import service.LobbyService;
 import service.game.GameManager;
 import utils.ServerSignals;
@@ -45,7 +46,9 @@ public class Server {
 
     private AtomicBoolean isTcpServerRun = new AtomicBoolean(false);
     private TcpServer tcpServer;
+    private HttpAuthServer httpAuthServer;
 
+    private final AuthService authService;
     private final GameManager gameManager;
     private final LobbyService lobbyService;
     private final Processor processor;
@@ -64,11 +67,13 @@ public class Server {
             MessageEncryptor encryptor,
             int encryptorCount,
             int processorCount,
-            int port,
+            int tcpPort,
+            int httpPort,
+            String jwtSecret,
             UserRepository userRepository,
             MatchRepository matchRepository
     ) {
-        validate(senderCount, decryptorCount, encryptorCount, processorCount, port);
+        validate(senderCount, decryptorCount, encryptorCount, processorCount, tcpPort, httpPort);
 
         this.senderCount = senderCount;
         this.decryptor = decryptor;
@@ -88,10 +93,13 @@ public class Server {
         this.lobbyService = new LobbyService(this.gameManager);
         this.lobbyService.setMessageDispatcher(asyncDispatcher);
 
-        this.processor = new Processor(this.lobbyService, this.gameManager);
+        this.authService = new AuthService(userRepository, jwtSecret);
+        this.httpAuthServer = new HttpAuthServer(httpPort, this.authService);
+
+        this.processor = new Processor(this.lobbyService, this.gameManager, this.authService);
         this.processorCount = processorCount;
 
-        this.port = port;
+        this.port = tcpPort;
 
         this.executorService = Executors.newFixedThreadPool(
                 2
@@ -107,7 +115,8 @@ public class Server {
             int decryptorCount,
             int encryptorCount,
             int processorCount,
-            int port
+            int tcpPort,
+            int httpPort
     ) throws IllegalArgumentException {
         if (senderCount <= 0)
             throw new IllegalArgumentException("Sender count must be greater than 0");
@@ -116,10 +125,10 @@ public class Server {
         if (processorCount <= 0)
             throw new IllegalArgumentException("Processor count must be greater than 0");
         if (encryptorCount <= 0)
-            throw new IllegalArgumentException("TCP port must be greater than 0");
+            throw new IllegalArgumentException("Encryptor count must be greater than 0");
 
-        if (port <= 1000)
-            throw new IllegalArgumentException("TCP port must be greater than 1000");
+        if (tcpPort <= 1000 || httpPort <= 1000)
+            throw new IllegalArgumentException("Ports must be greater than 1000");
     }
 
     public void start() {
@@ -134,6 +143,8 @@ public class Server {
         });
         this.tcpServer = new TcpServer(port, connectionManager, isTcpServerRun, rawInputQueue);
         executorService.execute(tcpServer);
+
+        this.httpAuthServer.start();
 
         log.info("Launching threads (Scale up)...");
 
@@ -168,6 +179,9 @@ public class Server {
         isTcpServerRun.set(false);
         if (tcpServer != null)
             tcpServer.stop();
+            
+        if (httpAuthServer != null)
+            httpAuthServer.stop();
 
         log.info("Shutting down game services");
         gameManager.stop();
