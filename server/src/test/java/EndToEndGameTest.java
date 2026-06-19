@@ -138,6 +138,7 @@ public class EndToEndGameTest {
 
         Message player1AuthResponse = expectMessage(player1Messages, Commands.AUTH_CONNECTION);
         assertNotNull(player1AuthResponse, "Player1 should receive auth response");
+        int user1 = player1AuthResponse.getUserId();
 
         String player2AuthPayload = mapper.writeValueAsString(
                 new AuthConnectionRequest(2, token2)
@@ -148,15 +149,16 @@ public class EndToEndGameTest {
 
         Message player2AuthResponse = expectMessage(player2Messages, Commands.AUTH_CONNECTION);
         assertNotNull(player2AuthResponse, "Player2 should receive auth response");
+        int user2 = player2AuthResponse.getUserId();
 
-        player1Client.sendCommand(new Message((byte) 1, 102L, Commands.JOIN_LOBBY, 1, ""));
-        player2Client.sendCommand(new Message((byte) 1, 103L, Commands.JOIN_LOBBY, 2, ""));
+        player1Client.sendCommand(new Message((byte) 1, 102L, Commands.JOIN_LOBBY, user1, ""));
+        player2Client.sendCommand(new Message((byte) 1, 103L, Commands.JOIN_LOBBY, user2, ""));
 
-        Message p1JoinResp = expectMessage(player1Messages, Commands.JOIN_LOBBY);
-        assertNotNull(p1JoinResp, "Player1 should receive join lobby response");
+        Message player1JoinResponse = expectMessage(player1Messages, Commands.JOIN_LOBBY);
+        assertNotNull(player1JoinResponse, "Player1 should receive join lobby response");
 
-        Message p2JoinResp = expectMessage(player2Messages, Commands.JOIN_LOBBY);
-        assertNotNull(p2JoinResp, "Player2 should receive join lobby response");
+        Message player2JoinResponse = expectMessage(player2Messages, Commands.JOIN_LOBBY);
+        assertNotNull(player2JoinResponse, "Player2 should receive join lobby response");
 
         Message p1Match = expectMessage(player1Messages, Commands.MATCH_FOUND);
         assertNotNull(p1Match, "Player1 should receive match found");
@@ -181,15 +183,15 @@ public class EndToEndGameTest {
             nextTurnClient = player2Client;
             currentQueue = player1Messages;
             nextQueue = player2Messages;
-            currentUserId = 1;
-            nextUserId = 2;
+            currentUserId = user1;
+            nextUserId = user2;
         } else {
             currentTurnClient = player2Client;
             nextTurnClient = player1Client;
             currentQueue = player2Messages;
             nextQueue = player1Messages;
-            currentUserId = 2;
-            nextUserId = 1;
+            currentUserId = user2;
+            nextUserId = user1;
         }
 
         // ROUND 1
@@ -428,45 +430,49 @@ public class EndToEndGameTest {
         LinkedBlockingQueue<Message> player1Messages = new LinkedBlockingQueue<>();
         LinkedBlockingQueue<Message> player2Messages = new LinkedBlockingQueue<>();
 
-        ClientTcp p1Client = new ClientTcp(
+        ClientTcp player1Client = new ClientTcp(
                 new MessageEncryptor(),
                 new MessageDecryptor(),
                 player1Messages::offer
         );
 
-        ClientTcp p2Client = new ClientTcp(
+        ClientTcp player2Client = new ClientTcp(
                 new MessageEncryptor(),
                 new MessageDecryptor(),
                 player2Messages::offer
         );
 
-        p1Client.connect(InetAddress.getByName("localhost"), 8081);
-        p2Client.connect(InetAddress.getByName("localhost"), 8081);
+        player1Client.connect(InetAddress.getByName("localhost"), 8081);
+        player2Client.connect(InetAddress.getByName("localhost"), 8081);
         Thread.sleep(1000);
 
         String token1 = registerAndLogin("TechPlayer1", "pass");
         String token2 = registerAndLogin("TechPlayer2", "pass");
 
-        p1Client.sendCommand(new Message(
+        player1Client.sendCommand(new Message(
                 (byte) 1,
                 200L,
                 Commands.AUTH_CONNECTION,
                 1,
                 mapper.writeValueAsString(new AuthConnectionRequest(1, token1))
         ));
-        expectMessage(player1Messages, Commands.AUTH_CONNECTION);
+        Message player1AuthResponse = expectMessage(player1Messages, Commands.AUTH_CONNECTION);
+        assertNotNull(player1AuthResponse);
+        int user1 = player1AuthResponse.getUserId();
 
-        p2Client.sendCommand(new Message(
+        player2Client.sendCommand(new Message(
                 (byte) 1,
                 201L,
                 Commands.AUTH_CONNECTION,
                 2,
                 mapper.writeValueAsString(new AuthConnectionRequest(2, token2))
         ));
-        expectMessage(player2Messages, Commands.AUTH_CONNECTION);
+        Message player2AuthResponse = expectMessage(player2Messages, Commands.AUTH_CONNECTION);
+        assertNotNull(player2AuthResponse);
+        int user2 = player2AuthResponse.getUserId();
 
-        p1Client.sendCommand(new Message((byte) 1, 202L, Commands.JOIN_LOBBY, 1, ""));
-        p2Client.sendCommand(new Message((byte) 1, 203L, Commands.JOIN_LOBBY, 2, ""));
+        player1Client.sendCommand(new Message((byte) 1, 202L, Commands.JOIN_LOBBY, user1, ""));
+        player2Client.sendCommand(new Message((byte) 1, 203L, Commands.JOIN_LOBBY, user2, ""));
 
         expectMessage(player1Messages, Commands.JOIN_LOBBY);
         expectMessage(player2Messages, Commands.JOIN_LOBBY);
@@ -474,7 +480,7 @@ public class EndToEndGameTest {
         expectMessage(player1Messages, Commands.MATCH_FOUND);
         expectMessage(player2Messages, Commands.MATCH_FOUND);
 
-        p1Client.disconnect();
+        player1Client.disconnect();
 
         Message p2EndMessage = expectMessage(player2Messages, Commands.MATCH_ENDED);
         assertNotNull(p2EndMessage, "P2 should receive MATCH_ENDED after opponent disconnects");
@@ -484,7 +490,7 @@ public class EndToEndGameTest {
         );
         assertTrue(p2EndData.isYouWinner(), "Player 2 should win by technical defeat");
 
-        p2Client.disconnect();
+        player2Client.disconnect();
     }
 
     private String registerAndLogin(String username, String password) throws Exception {
