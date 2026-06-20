@@ -53,8 +53,8 @@ public class GameManager {
 
         scheduler.scheduleAtFixedRate(
                 this::checkTimeouts,
-                10,
-                10,
+                1,
+                1,
                 TimeUnit.SECONDS
         );
     }
@@ -142,10 +142,10 @@ public class GameManager {
                 log.info("Round finished in match {} (DRAW: {})", matchId, 
                         result == MoveResult.DRAW);
                 responses.addAll(buildMoveMessages(gameSession, userId, row, col));
+                gameSession.resetBoard();
                 responses.addAll(buildRoundEndedMessages(
                         gameSession, userId, result == MoveResult.DRAW
                 ));
-                gameSession.resetBoard();
             }
             case MATCH_WIN, MATCH_END -> {
                 log.info("Match {} finished (DRAW: {})", matchId, 

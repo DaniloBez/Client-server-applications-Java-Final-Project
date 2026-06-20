@@ -1,6 +1,17 @@
 package ui;
 
+import decryptor.MessageDecryptor;
+import dto.Commands;
+import dto.Message;
+import dto.request.AuthConnectionRequest;
+import dto.response.ErrorResponse;
+import dto.response.MatchEndedResponse;
+import dto.response.MatchFoundResponse;
+import dto.response.PlayerMoveResponse;
+import dto.response.RoundEndedResponse;
 import dto.response.UserResponse;
+import encryptor.MessageEncryptor;
+import java.net.InetAddress;
 import java.net.URL;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -9,9 +20,9 @@ import javafx.scene.control.Alert;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import protocols.ClientTcp;
 import protocols.HttpClientWrapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
 public class App extends Application {
@@ -19,12 +30,25 @@ public class App extends Application {
     private Scene scene;
     private StackPane root;
     private HttpClientWrapper httpClient;
+    private ClientTcp clientTcp;
+    private final JsonMapper mapper = JsonMapper.builder().build();
+
+    private String serverAddress;
+    private int tcpPort;
+    private GameView currentGameView;
+    private UserResponse currentUser;
 
     @Override
     public void start(Stage primaryStage) {
         this.window = primaryStage;
         this.httpClient = new HttpClientWrapper();
         this.root = new StackPane();
+
+        this.clientTcp = new ClientTcp(
+                new MessageEncryptor(),
+                new MessageDecryptor(),
+                this::handleTcpMessage
+        );
 
         scene = new Scene(root, 600, 450);
 
@@ -44,8 +68,9 @@ public class App extends Application {
 
     private void showConnectionView() {
         ConnectionView view = new ConnectionView(details -> {
+            this.serverAddress = details.address();
+            this.tcpPort = details.tcpPort();
             httpClient.setConnectionDetails(details.address(), details.httpPort());
-            // TODO: TCP
             showAuthView();
         });
         root.getChildren().setAll(view);
@@ -62,16 +87,13 @@ public class App extends Application {
 
     private void loadAndShowPlayerMenu() {
         try {
-            UserResponse user = httpClient.getUser();
-            PlayerMenuView view = new PlayerMenuView(user, () -> {
+            currentUser = httpClient.getUser();
+            PlayerMenuView view = new PlayerMenuView(currentUser, () -> {
                 log.info("Connecting to game...");
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Початок гри");
-                alert.setHeaderText(null);
-                alert.setContentText("З'єднання з грою...");
-                alert.showAndWait();
+                startGameConnection();
             }, () -> {
                 httpClient.logout();
+                clientTcp.disconnect();
                 showAuthView();
             });
             root.getChildren().setAll(view);
@@ -79,6 +101,142 @@ public class App extends Application {
             log.warn("Failed to load player menu: {}", e.toString());
             showConnectionView();
         }
+    }
+
+    private void startGameConnection() {
+        try {
+            clientTcp.connect(InetAddress.getByName(serverAddress), tcpPort);
+
+            AuthConnectionRequest authentificationRequest = new AuthConnectionRequest(
+                    currentUser.id(),
+                    httpClient.getJwtToken()
+            );
+            Message authentificationMessage = new Message(
+                    (byte) 1,
+                    System.currentTimeMillis(),
+                    Commands.AUTH_CONNECTION,
+                    currentUser.id(),
+                    mapper.writeValueAsString(authentificationRequest)
+            );
+            clientTcp.sendCommand(authentificationMessage);
+
+            currentGameView = new GameView(clientTcp, currentUser.id(), () -> {
+                clientTcp.disconnect();
+                Platform.runLater(this::loadAndShowPlayerMenu);
+            });
+            root.getChildren().setAll(currentGameView);
+
+        } catch (Exception e) {
+            log.error("Failed to start game connection", e);
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Помилка");
+            alert.setHeaderText("Не вдалося підключитися до сервера гри");
+            alert.setContentText(e.getMessage());
+            alert.show();
+        }
+    }
+
+    private void handleTcpMessage(Message message) {
+        Platform.runLater(() -> {
+            try {
+                if (currentGameView == null && message.getCommandId() != Commands.AUTH_CONNECTION)
+                    return;
+
+                switch (message.getCommandId()) {
+                    case Commands.AUTH_CONNECTION:
+                        if (message.getData().contains("errorType")) {
+                            ErrorResponse err = mapper.readValue(
+                                    message.getData(),
+                                    ErrorResponse.class
+                            );
+                            showErrorAndLeave("Помилка автентифікації", err.errorMessage());
+                        } else {
+                            Message joinMsg = new Message(
+                                    (byte) 1,
+                                    System.currentTimeMillis(),
+                                    Commands.JOIN_LOBBY,
+                                    currentUser.id(),
+                                    ""
+                            );
+                            clientTcp.sendCommand(joinMsg);
+                        }
+                        break;
+                    case Commands.JOIN_LOBBY:
+                    case Commands.LEAVE_LOBBY:
+                        if (message.getData().contains("errorType")) {
+                            ErrorResponse err = mapper.readValue(
+                                    message.getData(),
+                                    ErrorResponse.class
+                            );
+                            showErrorAndLeave("Помилка лобі", err.errorMessage());
+                        } else if (message.getCommandId() == Commands.JOIN_LOBBY) {
+                            if (currentGameView != null) {
+                                currentGameView.setConnectedToLobby();
+                            }
+                        }
+                        break;
+                    case Commands.MATCH_FOUND:
+                        MatchFoundResponse matchFound = mapper.readValue(
+                                message.getData(),
+                                MatchFoundResponse.class
+                        );
+                        currentGameView.handleMatchFound(matchFound);
+                        break;
+                    case Commands.PLAYER_MOVE:
+                        PlayerMoveResponse move = mapper.readValue(
+                                message.getData(),
+                                PlayerMoveResponse.class
+                        );
+                        currentGameView.handlePlayerMove(move);
+                        break;
+                    case Commands.ROUND_ENDED:
+                        RoundEndedResponse round = mapper.readValue(
+                                message.getData(),
+                                RoundEndedResponse.class
+                        );
+                        currentGameView.handleRoundEnded(round);
+                        break;
+                    case Commands.MATCH_ENDED:
+                        MatchEndedResponse match = mapper.readValue(
+                                message.getData(),
+                                MatchEndedResponse.class
+                        );
+                        currentGameView.handleMatchEnded(match);
+                        break;
+                    case Commands.INVALID_MOVE:
+                        ErrorResponse err = mapper.readValue(
+                                message.getData(),
+                                ErrorResponse.class
+                        );
+                        currentGameView.handleError(err.errorMessage());
+                        break;
+                    default:
+                        if (message.getData().contains("errorType")) {
+                            ErrorResponse error = mapper.readValue(
+                                    message.getData(),
+                                    ErrorResponse.class
+                            );
+                            currentGameView.handleError(error.errorMessage());
+                        } else
+                            log.warn("Unhandled message command ID: {}", message.getCommandId());
+                        break;
+                }
+            } catch (Exception e) {
+                log.error("Failed to parse incoming message", e);
+            }
+        });
+    }
+
+    private void showErrorAndLeave(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Помилка");
+        alert.setHeaderText(title);
+        alert.setContentText(content);
+        alert.setOnHidden(e -> {
+            clientTcp.disconnect();
+            loadAndShowPlayerMenu();
+        });
+        alert.show();
     }
 
     public static void main(String[] args) {

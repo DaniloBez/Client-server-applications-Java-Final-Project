@@ -85,3 +85,33 @@
     -fx-font-size: 16px;
     -fx-text-fill: #34495e;
 }
+
+.board-button {
+    -fx-font-size: 36px;
+    -fx-font-weight: bold;
+    -fx-background-color: #f1f2f6;
+    -fx-border-color: #dfe4ea;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.board-button:hover {
+    -fx-background-color: #eccc68;
+}
+
+.danger-button {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-pref-height: 45;
+    -fx-pref-width: 160;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.danger-button:hover {
+    -fx-background-color: #c0392b;
+}

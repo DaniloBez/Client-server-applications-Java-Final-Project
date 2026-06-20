@@ -78,32 +78,36 @@ public class LobbyService {
     }
 
     private void tryMatchPlayers() {
-        while (true) {
-            Integer player1 = waitingQueue.pollFirst();
-            if (player1 == null) return;
+        try {
+            while (true) {
+                Integer player1 = waitingQueue.pollFirst();
+                if (player1 == null) return;
 
-            if (!inQueueSet.remove(player1))
-                continue;
+                if (!inQueueSet.remove(player1))
+                    continue;
 
-            Integer player2 = waitingQueue.pollFirst();
-            if (player2 == null) {
-                inQueueSet.add(player1);
-                waitingQueue.addFirst(player1);
-                return;
+                Integer player2 = waitingQueue.pollFirst();
+                if (player2 == null) {
+                    inQueueSet.add(player1);
+                    waitingQueue.addFirst(player1);
+                    return;
+                }
+
+                if (!inQueueSet.remove(player2)) {
+                    inQueueSet.add(player1);
+                    waitingQueue.addFirst(player1);
+                    continue;
+                }
+
+                log.info("Match found for players {} and {}", player1, player2);
+                List<Message> matchMessages = gameManager.createGame(player1, player2);
+                if (messageDispatcher != null) {
+                    for (Message message : matchMessages)
+                        messageDispatcher.accept(message);
+                }
             }
-
-            if (!inQueueSet.remove(player2)) {
-                inQueueSet.add(player1);
-                waitingQueue.addFirst(player1);
-                continue;
-            }
-
-            log.info("Match found for players {} and {}", player1, player2);
-            List<Message> matchMessages = gameManager.createGame(player1, player2);
-            if (messageDispatcher != null) {
-                for (Message m : matchMessages)
-                    messageDispatcher.accept(m);
-            }
+        } catch (Exception e) {
+            log.error("Error in tryMatchPlayers", e);
         }
     }
 
