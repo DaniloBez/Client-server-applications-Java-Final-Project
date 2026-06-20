@@ -12,9 +12,7 @@ services:
     restart: always
 
   game-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/danilobez/client-server-applications-java-final-project:latest
     environment:
       - DB_URL=jdbc:postgresql://postgres:5432/${DB_NAME}
       - DB_USER=${DB_USER}
