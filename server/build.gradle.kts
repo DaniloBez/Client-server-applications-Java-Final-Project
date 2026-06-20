@@ -38,5 +38,7 @@ dependencies {
 
 tasks.shadowJar {
     archiveFileName.set("server-all.jar")
-    mergeServiceFiles()
+    mergeServiceFiles {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 }
