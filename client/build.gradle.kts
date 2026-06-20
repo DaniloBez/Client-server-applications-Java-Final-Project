@@ -21,3 +21,7 @@ dependencies {
 application {
     mainClass.set("ClientLauncher")
 }
+
+tasks.shadowJar {
+    archiveFileName.set("client-all.jar")
+}
