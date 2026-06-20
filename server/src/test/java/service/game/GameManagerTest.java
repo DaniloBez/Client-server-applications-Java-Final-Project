@@ -133,7 +133,7 @@ public class GameManagerTest {
         assertEquals(1, message.getUserId());
 
         ErrorResponse error = mapper.readValue(message.getData(), ErrorResponse.class);
-        assertEquals("Invalid move!", error.errorType());
+        assertEquals("Недійсний хід!", error.errorType());
     }
 
     @Test

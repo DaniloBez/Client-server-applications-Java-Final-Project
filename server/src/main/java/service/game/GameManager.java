@@ -134,7 +134,7 @@ public class GameManager {
                 responses.add(buildMessage(
                         userId,
                         INVALID_MOVE,
-                        new ErrorResponse("Invalid move!", "Your move is invalid!")
+                        new ErrorResponse("Недійсний хід!", "Ваш хід недійсний!")
                 ));
             }
             case SUCCESS -> responses.addAll(buildMoveMessages(gameSession, userId, row, col));

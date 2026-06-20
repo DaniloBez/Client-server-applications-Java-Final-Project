@@ -24,14 +24,14 @@ public class AuthService {
 
     public void register(String username, String password) {
         if (username == null || username.isBlank())
-            throw new IllegalArgumentException("Username cannot be empty");
+            throw new IllegalArgumentException("Ім'я користувача не може бути порожнім");
 
         if (password == null || password.isBlank())
-            throw new IllegalArgumentException("Password cannot be empty");
+            throw new IllegalArgumentException("Пароль не може бути порожнім");
 
         Optional<User> existingUser = userRepository.findByUsername(username);
         if (existingUser.isPresent())
-            throw new IllegalArgumentException("User with this username already exists");
+            throw new IllegalArgumentException("Користувач з таким іменем вже існує");
 
         String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
         int userId = userRepository.create(username, passwordHash);

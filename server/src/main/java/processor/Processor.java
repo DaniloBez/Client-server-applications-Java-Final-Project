@@ -66,16 +66,16 @@ public class Processor implements ProcessorInterface {
                 return List.of(buildErrorMessage(
                         message,
                         401,
-                        "Unauthorized",
-                        "Invalid token"
+                        "Неавторизовано",
+                        "Недійсний токен"
                 ));
             }
 
             SessionRegistry.registerUser(userId, netMessage.connectionId());
             
             SuccessResponse response = new SuccessResponse(
-                    "Authenticated", 
-                    "Successfully authenticated"
+                    "Автентифіковано", 
+                    "Успішна автентифікація"
             );
             String jsonPayload = mapper.writeValueAsString(response);
             log.info("User {} authenticated successfully", request.userId());
@@ -88,7 +88,7 @@ public class Processor implements ProcessorInterface {
             ));
         } catch (Exception e) {
             log.error("Failed to parse auth connection request", e);
-            return List.of(buildErrorMessage(message, 400, "Bad Request", e.getMessage()));
+            return List.of(buildErrorMessage(message, 400, "Невірний запит", e.getMessage()));
         }
     }
 
@@ -110,7 +110,7 @@ public class Processor implements ProcessorInterface {
             return gameManager.handleMove(message.getUserId(), request.row(), request.col());
         } catch (Exception e) {
             log.error("Failed to parse player move request", e);
-            return List.of(buildErrorMessage(message, 400, "Bad Request", e.getMessage()));
+            return List.of(buildErrorMessage(message, 400, "Невірний запит", e.getMessage()));
         }
     }
 
@@ -138,8 +138,8 @@ public class Processor implements ProcessorInterface {
                     return List.of(buildErrorMessage(
                             message,
                             401,
-                            "Unauthorized",
-                            "You must authenticate first using AUTH_CONNECTION"
+                            "Неавторизовано",
+                            "Ви повинні спочатку авторизуватись за допомогою AUTH_CONNECTION"
                     ));
                 }
             }
@@ -150,22 +150,25 @@ public class Processor implements ProcessorInterface {
                 return List.of(buildErrorMessage(
                         message,
                         404,
-                        "Route Not Found",
-                        "Unknown command ID: " + commandId
+                        "Маршрут не знайдено",
+                        "Невідомий ID команди: " + commandId
                 ));
 
             return handler.apply(networkMessage);
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("Bad request from connection {}: {}", networkMessage.connectionId(), 
                     e.getMessage());
-            return List.of(buildErrorMessage(message, 400, "Bad Request", e.getMessage()));
+            return List.of(buildErrorMessage(message, 400, "Невірний запит", e.getMessage()));
         } catch (Exception e) {
-            log.error("Unhandled exception processing message for connection " 
-                    + networkMessage.connectionId(), e);
+            log.error(
+                    "Unhandled exception processing message for connection {}",
+                    networkMessage.connectionId(),
+                    e
+            );
             return List.of(buildErrorMessage(
                     message,
                     500,
-                    "Internal Server Error",
+                    "Внутрішня помилка сервера",
                     e.getMessage()
             ));
         }

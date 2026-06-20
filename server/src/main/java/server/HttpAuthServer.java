@@ -71,7 +71,7 @@ public class HttpAuthServer {
 
             if (token == null) {
                 log.warn("Failed login attempt for user: {}", request.username());
-                sendError(exchange, 401, "Invalid credentials");
+                sendError(exchange, 401, "Невірний логін або пароль");
                 return;
             }
 
@@ -88,7 +88,7 @@ public class HttpAuthServer {
             }
         } catch (Exception e) {
             log.error("Error processing login", e);
-            sendError(exchange, 400, "Bad Request");
+            sendError(exchange, 400, "Невірний запит");
         } finally {
             exchange.close();
         }
@@ -117,7 +117,7 @@ public class HttpAuthServer {
             sendError(exchange, 409, e.getMessage());
         } catch (Exception e) {
             log.error("Error processing registration", e);
-            sendError(exchange, 400, "Bad Request");
+            sendError(exchange, 400, "Невірний запит");
         } finally {
             exchange.close();
         }
@@ -133,7 +133,7 @@ public class HttpAuthServer {
         try {
             String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                sendError(exchange, 401, "Missing or invalid Authorization header");
+                sendError(exchange, 401, "Відсутній або недійсний заголовок авторизації");
                 return;
             }
 
@@ -141,13 +141,13 @@ public class HttpAuthServer {
             int userId = authService.verify(token);
 
             if (userId == -1) {
-                sendError(exchange, 401, "Invalid token");
+                sendError(exchange, 401, "Недійсний токен");
                 return;
             }
 
             Optional<User> userOptional = authService.getUser(userId);
             if (userOptional.isEmpty()) {
-                sendError(exchange, 404, "User not found");
+                sendError(exchange, 404, "Користувача не знайдено");
                 return;
             }
 
@@ -169,7 +169,7 @@ public class HttpAuthServer {
             }
         } catch (Exception e) {
             log.error("Error processing user request", e);
-            sendError(exchange, 400, "Bad Request");
+            sendError(exchange, 400, "Невірний запит");
         } finally {
             exchange.close();
         }
