@@ -19,7 +19,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("ClientLauncher")
+    mainClass.set("Main")
 }
 
 tasks.shadowJar {
