@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-test:
     name: Build & Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 [Beta]
 
     services:
       postgres:
@@ -65,7 +65,7 @@ jobs:
   docker-verify:
     name: Verify Docker Build
     needs: build-and-test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 [Beta]
 
     steps:
       - name: Checkout Repository
@@ -85,7 +85,7 @@ jobs:
 
   sast-codeql:
     name: CodeQL Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 [Beta]
     permissions:
       actions: read
       contents: read
