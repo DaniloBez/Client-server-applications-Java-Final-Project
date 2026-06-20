@@ -53,8 +53,8 @@ public class GameManager {
 
         scheduler.scheduleAtFixedRate(
                 this::checkTimeouts,
-                10,
-                10,
+                1,
+                1,
                 TimeUnit.SECONDS
         );
     }
@@ -134,7 +134,7 @@ public class GameManager {
                 responses.add(buildMessage(
                         userId,
                         INVALID_MOVE,
-                        new ErrorResponse("Invalid move!", "Your move is invalid!")
+                        new ErrorResponse("Недійсний хід!", "Ваш хід недійсний!")
                 ));
             }
             case SUCCESS -> responses.addAll(buildMoveMessages(gameSession, userId, row, col));
@@ -142,10 +142,10 @@ public class GameManager {
                 log.info("Round finished in match {} (DRAW: {})", matchId, 
                         result == MoveResult.DRAW);
                 responses.addAll(buildMoveMessages(gameSession, userId, row, col));
+                gameSession.resetBoard();
                 responses.addAll(buildRoundEndedMessages(
                         gameSession, userId, result == MoveResult.DRAW
                 ));
-                gameSession.resetBoard();
             }
             case MATCH_WIN, MATCH_END -> {
                 log.info("Match {} finished (DRAW: {})", matchId, 

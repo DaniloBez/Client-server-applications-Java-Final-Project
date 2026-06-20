@@ -25,5 +25,6 @@ USER gameuser
 COPY --from=builder /app/server/build/libs/server-all.jar ./server.jar
 
 EXPOSE 10000
+EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "server.jar"]

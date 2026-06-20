@@ -50,7 +50,7 @@ public class LobbyServiceTest {
         assertEquals(1, message.getUserId());
 
         SuccessResponse success = mapper.readValue(message.getData(), SuccessResponse.class);
-        assertEquals("Joined lobby", success.title());
+        assertEquals("Приєднано до лобі", success.title());
     }
 
     @Test
@@ -63,7 +63,7 @@ public class LobbyServiceTest {
         assertEquals(Commands.JOIN_LOBBY, message.getCommandId());
         
         ErrorResponse error = mapper.readValue(message.getData(), ErrorResponse.class);
-        assertEquals("Already in queue", error.errorType());
+        assertEquals("Вже в черзі", error.errorType());
     }
 
     @Test
@@ -76,7 +76,7 @@ public class LobbyServiceTest {
         assertEquals(Commands.LEAVE_LOBBY, message.getCommandId());
 
         SuccessResponse success = mapper.readValue(message.getData(), SuccessResponse.class);
-        assertEquals("Left lobby", success.title());
+        assertEquals("Покинуто лобі", success.title());
     }
 
     @Test
@@ -88,7 +88,7 @@ public class LobbyServiceTest {
         assertEquals(Commands.LEAVE_LOBBY, message.getCommandId());
 
         ErrorResponse error = mapper.readValue(message.getData(), ErrorResponse.class);
-        assertEquals("Not in queue", error.errorType());
+        assertEquals("Не в черзі", error.errorType());
     }
 
     @Test

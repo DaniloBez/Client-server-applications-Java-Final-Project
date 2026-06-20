@@ -50,13 +50,13 @@ public class LobbyService {
             return List.of(buildMessage(
                     playerId,
                     Commands.JOIN_LOBBY,
-                    new SuccessResponse("Joined lobby", "You are now in the matchmaking queue.")
+                    new SuccessResponse("Приєднано до лобі", "Ви тепер у черзі на гру.")
             ));
         }
         return List.of(buildMessage(
                 playerId,
                 Commands.JOIN_LOBBY,
-                new ErrorResponse("Already in queue", "You are already searching for a match.")
+                new ErrorResponse("Вже в черзі", "Ви вже шукаєте гру.")
         ));
     }
 
@@ -67,43 +67,47 @@ public class LobbyService {
             return List.of(buildMessage(
                     playerId,
                     Commands.LEAVE_LOBBY,
-                    new SuccessResponse("Left lobby", "You have left the matchmaking queue.")
+                    new SuccessResponse("Покинуто лобі", "Ви вийшли з черги на гру.")
             ));
         }
         return List.of(buildMessage(
                 playerId,
                 Commands.LEAVE_LOBBY,
-                new ErrorResponse("Not in queue", "You are not in the matchmaking queue.")
+                new ErrorResponse("Не в черзі", "Ви не знаходитесь у черзі на гру.")
         ));
     }
 
     private void tryMatchPlayers() {
-        while (true) {
-            Integer player1 = waitingQueue.pollFirst();
-            if (player1 == null) return;
+        try {
+            while (true) {
+                Integer player1 = waitingQueue.pollFirst();
+                if (player1 == null) return;
 
-            if (!inQueueSet.remove(player1))
-                continue;
+                if (!inQueueSet.remove(player1))
+                    continue;
 
-            Integer player2 = waitingQueue.pollFirst();
-            if (player2 == null) {
-                inQueueSet.add(player1);
-                waitingQueue.addFirst(player1);
-                return;
+                Integer player2 = waitingQueue.pollFirst();
+                if (player2 == null) {
+                    inQueueSet.add(player1);
+                    waitingQueue.addFirst(player1);
+                    return;
+                }
+
+                if (!inQueueSet.remove(player2)) {
+                    inQueueSet.add(player1);
+                    waitingQueue.addFirst(player1);
+                    continue;
+                }
+
+                log.info("Match found for players {} and {}", player1, player2);
+                List<Message> matchMessages = gameManager.createGame(player1, player2);
+                if (messageDispatcher != null) {
+                    for (Message message : matchMessages)
+                        messageDispatcher.accept(message);
+                }
             }
-
-            if (!inQueueSet.remove(player2)) {
-                inQueueSet.add(player1);
-                waitingQueue.addFirst(player1);
-                continue;
-            }
-
-            log.info("Match found for players {} and {}", player1, player2);
-            List<Message> matchMessages = gameManager.createGame(player1, player2);
-            if (messageDispatcher != null) {
-                for (Message m : matchMessages)
-                    messageDispatcher.accept(m);
-            }
+        } catch (Exception e) {
+            log.error("Error in tryMatchPlayers", e);
         }
     }
 

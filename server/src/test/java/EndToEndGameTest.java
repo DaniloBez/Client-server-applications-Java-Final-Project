@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import protocols.ClientTcp;
 import repository.MatchRepository;
 import repository.UserRepository;
 import server.Server;
