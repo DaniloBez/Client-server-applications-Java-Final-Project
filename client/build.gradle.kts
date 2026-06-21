@@ -16,6 +16,16 @@ dependencies {
     implementation(project(":shared"))
     implementation("tools.jackson.core:jackson-core:3.1.4")
     implementation("tools.jackson.core:jackson-databind:3.1.4")
+
+    val javaFxVersion = "25"
+    val platforms = listOf("win", "mac", "mac-aarch64", "linux")
+    val modules = listOf("base", "graphics", "controls")
+
+    for (os in platforms) {
+        for (module in modules) {
+            implementation("org.openjfx:javafx-$module:$javaFxVersion:$os")
+        }
+    }
 }
 
 application {
