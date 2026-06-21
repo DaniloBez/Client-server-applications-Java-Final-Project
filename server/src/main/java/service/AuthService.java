@@ -5,8 +5,12 @@ import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import dto.request.FindUsersRequest;
+import dto.response.LeaderboardEntry;
+import dto.response.PageResponse;
 import entity.User;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.mindrot.jbcrypt.BCrypt;
@@ -44,6 +48,10 @@ public class AuthService {
             return null;
 
         User user = optionalUser.get();
+        
+        if (user.isBanned())
+            throw new IllegalStateException("Ваш обліковий запис заблоковано");
+        
         if (!BCrypt.checkpw(password, user.getPasswordHash()))
             return null;
 
@@ -73,5 +81,33 @@ public class AuthService {
 
     public Optional<User> getUser(int userId) {
         return userRepository.getUser(userId);
+    }
+
+    public void createAdmin(String username, String password) {
+        if (username == null || username.isBlank())
+            throw new IllegalArgumentException("Ім'я адміністратора не може бути порожнім");
+
+        if (password == null || password.isBlank())
+            throw new IllegalArgumentException("Пароль не може бути порожнім");
+
+        Optional<User> existingUser = userRepository.findByUsername(username);
+        if (existingUser.isPresent())
+            throw new IllegalArgumentException("Користувач з таким іменем вже існує");
+
+        String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
+        int userId = userRepository.createAdmin(username, passwordHash);
+        log.info("Created admin user: {} with id {}", username, userId);
+    }
+
+    public List<LeaderboardEntry> getTopPlayers(int limit) {
+        return userRepository.getTopPlayers(limit);
+    }
+
+    public PageResponse<User> getUsers(FindUsersRequest request) {
+        return userRepository.findAll(request);
+    }
+
+    public void setBannedStatus(long userId, boolean status) {
+        userRepository.setBannedStatus(userId, status);
     }
 }

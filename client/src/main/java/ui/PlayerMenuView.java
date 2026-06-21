@@ -9,13 +9,19 @@ import javafx.scene.layout.VBox;
 
 public class PlayerMenuView extends VBox {
 
-    public PlayerMenuView(UserResponse user, Runnable onStartGame, Runnable onLogout) {
+    public PlayerMenuView(
+            UserResponse user,
+            Runnable onStartGame,
+            Runnable onLogout,
+            Runnable onShowLeaderboard,
+            Runnable onShowAdminPanel
+    ) {
         setPadding(new Insets(20));
         setSpacing(20);
         setAlignment(Pos.CENTER);
         getStyleClass().add("container");
 
-        Label welcomeLabel = new Label("Вітаємо, " + user.username() + "!");
+        Label welcomeLabel = new Label("Вітаємо, " + user.username());
         welcomeLabel.getStyleClass().add("title-label");
 
         VBox statsBox = new VBox(10);
@@ -28,22 +34,42 @@ public class PlayerMenuView extends VBox {
         Label matchesLabel = new Label("Зіграно матчів: " + user.matchCount());
         matchesLabel.getStyleClass().add("stat-label");
 
-        String displayRole = "ADMIN".equalsIgnoreCase(user.role()) ? "Адміністратор" : "Гравець";
+        String displayRole = "ADMIN".equalsIgnoreCase(user.role())
+                ? "Адміністратор" : "Гравець";
         Label roleLabel = new Label("Роль: " + displayRole);
         roleLabel.getStyleClass().add("stat-label");
 
         statsBox.getChildren().addAll(eloLabel, matchesLabel, roleLabel);
 
-        Button startButton = new Button("Почати гру");
+        Button startButton = new Button("▶ Почати гру");
         startButton.getStyleClass().add("primary-button");
-        startButton.setStyle("-fx-font-size: 18px; -fx-min-width: 200; -fx-min-height: 50;");
-        
-        startButton.setOnAction(e -> onStartGame.run());
+        startButton.setStyle("-fx-font-size: 18px; -fx-min-width: 240; -fx-min-height: 50;");
+        startButton.setOnAction(_ -> onStartGame.run());
 
-        Button logoutButton = new Button("Вийти з акаунта");
+        Button leaderboardButton = new Button("🏆 Рейтинг гравців");
+        leaderboardButton.getStyleClass().add("primary-button");
+        leaderboardButton.setStyle("-fx-min-width: 240;");
+        leaderboardButton.setOnAction(_ -> onShowLeaderboard.run());
+
+        Button adminButton = new Button("Панель Адміністратора");
+        adminButton.getStyleClass().add("secondary-button");
+        adminButton.setStyle(
+                "-fx-background-color: linear-gradient(to right, #f39c12, #e67e22);"
+                + " -fx-text-fill: white; -fx-min-width: 240;"
+                + " -fx-effect: dropshadow(gaussian, rgba(243,156,18,0.4), 10, 0, 0, 3);"
+        );
+        adminButton.setOnAction(_ -> onShowAdminPanel.run());
+        adminButton.setVisible("ADMIN".equalsIgnoreCase(user.role()));
+        adminButton.setManaged("ADMIN".equalsIgnoreCase(user.role()));
+
+        Button logoutButton = new Button("← Вийти з акаунта");
         logoutButton.getStyleClass().add("secondary-button");
-        logoutButton.setOnAction(e -> onLogout.run());
+        logoutButton.setStyle("-fx-min-width: 240;");
+        logoutButton.setOnAction(_ -> onLogout.run());
 
-        getChildren().addAll(welcomeLabel, statsBox, startButton, logoutButton);
+        getChildren().addAll(welcomeLabel, statsBox, startButton, leaderboardButton);
+        if ("ADMIN".equalsIgnoreCase(user.role()))
+            getChildren().add(adminButton);
+        getChildren().add(logoutButton);
     }
 }

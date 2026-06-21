@@ -16,7 +16,6 @@ import java.net.URL;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
@@ -26,8 +25,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
 public class App extends Application {
-    private Stage window;
-    private Scene scene;
     private StackPane root;
     private HttpClientWrapper httpClient;
     private ClientTcp clientTcp;
@@ -40,7 +37,6 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        this.window = primaryStage;
         this.httpClient = new HttpClientWrapper();
         this.root = new StackPane();
 
@@ -50,20 +46,19 @@ public class App extends Application {
                 this::handleTcpMessage
         );
 
-        scene = new Scene(root, 600, 450);
+        Scene scene = new Scene(root, 600, 450);
 
         URL cssUrl = getClass().getResource("/styles.css");
-        if (cssUrl != null) {
+        if (cssUrl != null)
             scene.getStylesheets().add(cssUrl.toExternalForm());
-        }
 
-        window.setTitle("Гра Хрестики-нулики");
-        window.setScene(scene);
+        primaryStage.setTitle("Гра Хрестики-нулики");
+        primaryStage.setScene(scene);
 
         showConnectionView();
 
-        window.setMaximized(true);
-        window.show();
+        primaryStage.setMaximized(true);
+        primaryStage.show();
     }
 
     private void showConnectionView() {
@@ -88,19 +83,35 @@ public class App extends Application {
     private void loadAndShowPlayerMenu() {
         try {
             currentUser = httpClient.getUser();
-            PlayerMenuView view = new PlayerMenuView(currentUser, () -> {
-                log.info("Connecting to game...");
-                startGameConnection();
-            }, () -> {
-                httpClient.logout();
-                clientTcp.disconnect();
-                showAuthView();
-            });
+            PlayerMenuView view = new PlayerMenuView(
+                    currentUser,
+                    () -> {
+                        log.info("Connecting to game...");
+                        startGameConnection();
+                    },
+                    () -> {
+                        httpClient.logout();
+                        clientTcp.disconnect();
+                        showAuthView();
+                    },
+                    this::showLeaderboardView,
+                    this::showAdminPanelView
+            );
             root.getChildren().setAll(view);
         } catch (Exception e) {
             log.warn("Failed to load player menu: {}", e.toString());
             showConnectionView();
         }
+    }
+
+    private void showLeaderboardView() {
+        LeaderboardView view = new LeaderboardView(httpClient, this::loadAndShowPlayerMenu);
+        root.getChildren().setAll(view);
+    }
+
+    private void showAdminPanelView() {
+        AdminPanelView view = new AdminPanelView(httpClient, this::loadAndShowPlayerMenu);
+        root.getChildren().setAll(view);
     }
 
     private void startGameConnection() {
@@ -128,11 +139,12 @@ public class App extends Application {
 
         } catch (Exception e) {
             log.error("Failed to start game connection", e);
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Помилка");
-            alert.setHeaderText("Не вдалося підключитися до сервера гри");
-            alert.setContentText(e.getMessage());
-            alert.show();
+            StyledDialog.show(
+                    root,
+                    StyledDialog.DialogType.ERROR,
+                    "Не вдалося підключитися",
+                    e.getMessage() != null ? e.getMessage() : "Невідома помилка"
+            );
         }
     }
 
@@ -169,11 +181,8 @@ public class App extends Application {
                                     ErrorResponse.class
                             );
                             showErrorAndLeave("Помилка лобі", err.errorMessage());
-                        } else if (message.getCommandId() == Commands.JOIN_LOBBY) {
-                            if (currentGameView != null) {
-                                currentGameView.setConnectedToLobby();
-                            }
-                        }
+                        } else if (message.getCommandId() == Commands.JOIN_LOBBY)
+                            currentGameView.setConnectedToLobby();
                         break;
                     case Commands.MATCH_FOUND:
                         MatchFoundResponse matchFound = mapper.readValue(
@@ -228,15 +237,16 @@ public class App extends Application {
     }
 
     private void showErrorAndLeave(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Помилка");
-        alert.setHeaderText(title);
-        alert.setContentText(content);
-        alert.setOnHidden(e -> {
-            clientTcp.disconnect();
-            loadAndShowPlayerMenu();
-        });
-        alert.show();
+        StyledDialog.show(
+                root,
+                StyledDialog.DialogType.ERROR,
+                title,
+                content,
+                () -> {
+                    clientTcp.disconnect();
+                    loadAndShowPlayerMenu();
+                }
+        );
     }
 
     public static void main(String[] args) {

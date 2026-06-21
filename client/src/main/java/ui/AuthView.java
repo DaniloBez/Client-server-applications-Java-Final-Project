@@ -6,105 +6,153 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import protocols.HttpClientWrapper;
 
-public class AuthView extends VBox {
+public class AuthView extends StackPane {
     private static final Logger log = LoggerFactory.getLogger(AuthView.class);
 
-    public AuthView(HttpClientWrapper httpClient, Runnable onAuthSuccess, Runnable onBack) {
-        setPadding(new Insets(20));
-        setSpacing(15);
+    public AuthView(
+            HttpClientWrapper httpClient,
+            Runnable onAuthSuccess,
+            Runnable onBack
+    ) {
         setAlignment(Pos.CENTER);
-        getStyleClass().add("container");
 
-        Label title = new Label("Авторизація");
+        VBox card = new VBox(16);
+        card.setPadding(new Insets(20));
+        card.setSpacing(14);
+        card.setAlignment(Pos.CENTER);
+        card.getStyleClass().add("container");
+
+        Label title = new Label("🔐 Авторизація");
         title.getStyleClass().add("title-label");
 
-        Label userLabel = new Label("Ім'я користувача:");
+        Label userLabel = new Label("Ім'я користувача");
         userLabel.getStyleClass().add("stat-label");
         TextField usernameField = new TextField();
-        usernameField.setPromptText("Ім'я користувача");
+        usernameField.setPromptText("Введіть логін");
         usernameField.setMaxWidth(300);
 
-        Label passLabel = new Label("Пароль:");
+        VBox userBox = new VBox(8, userLabel, usernameField);
+        userBox.setAlignment(Pos.CENTER_LEFT);
+        userBox.setMaxWidth(300);
+
+        Label passLabel = new Label("Пароль");
         passLabel.getStyleClass().add("stat-label");
         PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Пароль");
+        passwordField.setPromptText("Введіть пароль");
         passwordField.setMaxWidth(300);
+
+        VBox passBox = new VBox(8, passLabel, passwordField);
+        passBox.setAlignment(Pos.CENTER_LEFT);
+        passBox.setMaxWidth(300);
 
         Label errorLabel = new Label();
         errorLabel.getStyleClass().add("error-label");
+        errorLabel.setWrapText(true);
+        errorLabel.setMaxWidth(300);
 
         Button loginButton = new Button("Увійти");
         loginButton.getStyleClass().add("primary-button");
-        
-        Button registerButton = new Button("Реєстрація");
+        loginButton.setStyle("-fx-min-width: 240;");
+
+        Label orLabel = new Label("або");
+        orLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.4); -fx-font-size: 12px;");
+
+        Button registerButton = new Button("Створити акаунт");
         registerButton.getStyleClass().add("secondary-button");
+        registerButton.setStyle(
+                "-fx-min-width: 240;"
+                + " -fx-border-color: rgba(108, 92, 231, 0.4);"
+                + " -fx-text-fill: #a29bfe;"
+        );
 
-        Button backButton = new Button("Назад");
+        Button backButton = new Button("← Назад");
         backButton.getStyleClass().add("secondary-button");
+        backButton.setStyle("-fx-min-width: 140; -fx-pref-width: 140;");
         backButton.setOnAction(e -> onBack.run());
-
-        HBox buttonBox = new HBox(10, backButton, loginButton, registerButton);
-        buttonBox.setAlignment(Pos.CENTER);
 
         loginButton.setOnAction(e -> {
             try {
                 String user = usernameField.getText().trim();
                 String pass = passwordField.getText();
                 if (user.isEmpty() || pass.isEmpty()) {
-                    errorLabel.setText("Ім'я користувача та пароль не можуть бути порожніми");
+                    errorLabel.getStyleClass().remove("success-label");
+                    errorLabel.getStyleClass().add("error-label");
+                    errorLabel.setText("Заповніть усі поля");
                     return;
                 }
+
                 boolean success = httpClient.login(user, pass);
-                if (success) {
+                if (success)
                     onAuthSuccess.run();
-                } else {
-                    errorLabel.setText("Невірне ім'я користувача або пароль");
+                else {
+                    errorLabel.getStyleClass().remove("success-label");
+                    errorLabel.getStyleClass().add("error-label");
+                    errorLabel.setText("Невірне ім'я або пароль");
                 }
             } catch (Exception ex) {
                 log.warn("Login failed: {}", ex.toString());
-                String msg = ex.getClass().getSimpleName().equals("ConnectException") 
-                        ? "Не вдалося підключитися до сервера" 
-                        : (ex.getMessage() != null 
+                errorLabel.getStyleClass().remove("success-label");
+                errorLabel.getStyleClass().add("error-label");
+                String msg = ex.getClass().getSimpleName().equals("ConnectException")
+                        ? "Не вдалося підключитися до сервера"
+                        : (ex.getMessage() != null
                                 ? ex.getMessage() : ex.getClass().getSimpleName());
-                errorLabel.setText("Помилка входу: " + msg);
+                errorLabel.setText(msg);
             }
         });
 
-        registerButton.setOnAction(e -> {
+        registerButton.setOnAction(_ -> {
             try {
                 String user = usernameField.getText().trim();
                 String pass = passwordField.getText();
                 if (user.isEmpty() || pass.isEmpty()) {
-                    errorLabel.setText("Ім'я користувача та пароль не можуть бути порожніми");
+                    errorLabel.getStyleClass().remove("success-label");
+                    errorLabel.getStyleClass().add("error-label");
+                    errorLabel.setText("Заповніть усі поля");
                     return;
                 }
                 boolean success = httpClient.register(user, pass);
                 if (success) {
                     errorLabel.getStyleClass().remove("error-label");
                     errorLabel.getStyleClass().add("success-label");
-                    errorLabel.setText("Успішно зареєстровано. Тепер ви можете увійти.");
+                    StyledDialog.show(this, StyledDialog.DialogType.SUCCESS, "Реєстрація успішна",
+                            "✅ Успішно! Тепер ви можете увійти.");
                 } else {
+                    errorLabel.getStyleClass().remove("success-label");
+                    errorLabel.getStyleClass().add("error-label");
                     errorLabel.setText("Помилка реєстрації");
                 }
             } catch (Exception ex) {
                 log.warn("Registration error: {}", ex.toString());
-                String msg = ex.getClass().getSimpleName().equals("ConnectException") 
-                        ? "Не вдалося підключитися до сервера" 
-                        : (ex.getMessage() != null 
+                errorLabel.getStyleClass().remove("success-label");
+                errorLabel.getStyleClass().add("error-label");
+                String msg = ex.getClass().getSimpleName().equals("ConnectException")
+                        ? "Не вдалося підключитися до сервера"
+                        : (ex.getMessage() != null
                                 ? ex.getMessage() : ex.getClass().getSimpleName());
-                errorLabel.setText("Помилка реєстрації: " + msg);
+                errorLabel.setText(msg);
             }
         });
 
-        getChildren().addAll(
-                title, userLabel, usernameField, passLabel, passwordField, 
-                buttonBox, errorLabel
+        passwordField.setOnAction(_ -> loginButton.fire());
+
+        card.getChildren().addAll(
+                title,
+                errorLabel,
+                userBox,
+                passBox,
+                loginButton,
+                orLabel,
+                registerButton,
+                backButton
         );
+
+        getChildren().add(card);
     }
 }

@@ -9,8 +9,10 @@ import dto.request.FindUsersRequest;
 import dto.request.Pagination;
 import dto.request.Sorting;
 import dto.request.UserFilter;
+import dto.response.LeaderboardEntry;
 import dto.response.PageResponse;
 import entity.User;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -142,12 +144,54 @@ public class UserRepositoryTest extends BaseRepositoryTest {
         userRepository.updateEloAndMatchCount(proId, 500);
 
         UserFilter filter = new UserFilter(
-                null, "PLAYER", null, 1200, null, null, null, null, null
+                null,
+                "PLAYER",
+                null,
+                1200,
+                null,
+                null,
+                null,
+                null,
+                null
         );
+
         FindUsersRequest request = new FindUsersRequest(filter, null, null);
         PageResponse<User> response = userRepository.findAll(request);
 
         assertEquals(1, response.totalElements());
         assertEquals("pro_player", response.items().getFirst().getUsername());
+    }
+
+    @Test
+    void shouldCreateAdmin() {
+        int adminId = userRepository.createAdmin("superadmin", "hash");
+        Optional<User> adminOpt = userRepository.getUser(adminId);
+
+        assertTrue(adminOpt.isPresent());
+        assertEquals("superadmin", adminOpt.get().getUsername());
+        assertEquals("ADMIN", adminOpt.get().getRole().name());
+    }
+
+    @Test
+    void shouldReturnTopPlayersForLeaderboard() {
+        int p1 = userRepository.create("p1", "pass");
+        int p2 = userRepository.create("p2", "pass");
+        int p3 = userRepository.create("p3", "pass");
+
+        userRepository.updateEloAndMatchCount(p1, 200);
+        userRepository.updateEloAndMatchCount(p2, 500);
+        userRepository.updateEloAndMatchCount(p3, -100);
+
+        List<LeaderboardEntry> top = userRepository.getTopPlayers(2);
+
+        assertEquals(2, top.size());
+        
+        assertEquals("p2", top.getFirst().username());
+        assertEquals(1500, top.getFirst().eloRating());
+        assertEquals(1, top.getFirst().rank());
+        
+        assertEquals("p1", top.get(1).username());
+        assertEquals(1200, top.get(1).eloRating());
+        assertEquals(2, top.get(1).rank());
     }
 }

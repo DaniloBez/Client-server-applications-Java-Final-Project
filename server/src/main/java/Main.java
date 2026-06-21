@@ -7,6 +7,7 @@ import org.flywaydb.core.Flyway;
 import repository.MatchRepository;
 import repository.UserRepository;
 import server.Server;
+import service.AuthService;
 import utils.DbConnectionPool;
 
 public class Main {
@@ -23,6 +24,32 @@ public class Main {
     public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         migrate();
+
+        if (args.length == 3 && args[0].equals("--create-admin")) {
+            System.out.println("Creating admin user...");
+            DbConnectionPool pool = new DbConnectionPool(
+                    10,
+                    url + "?stringtype=unspecified",
+                    user,
+                    password
+            );
+
+            UserRepository repo = new UserRepository(pool);
+            AuthService auth = new AuthService(
+                    repo,
+                    jwtSecret != null
+                            ? jwtSecret
+                            : "fallback-secret"
+            );
+            try {
+                auth.createAdmin(args[1], args[2]);
+                System.out.println("Admin created successfully!");
+            } catch (Exception e) {
+                System.err.println("Failed to create admin: " + e.getMessage());
+            }
+            System.exit(0);
+        }
+
         autoStartServer();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -39,9 +66,8 @@ public class Main {
                 if ("exit".equals(input)) {
                     System.out.println("Exit command received. Stopping...");
                     System.exit(0);
-                } else {
+                } else
                     System.out.println("Unknown command. Type 'exit' to stop.");
-                }
             }
         } catch (Exception e) {
             System.out.println("No interactive console detected. Running in daemon mode.");
