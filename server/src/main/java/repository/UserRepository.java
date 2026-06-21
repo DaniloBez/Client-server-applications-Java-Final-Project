@@ -4,6 +4,7 @@ import dto.request.FindUsersRequest;
 import dto.request.Pagination;
 import dto.request.Sorting;
 import dto.request.UserFilter;
+import dto.response.LeaderboardEntry;
 import dto.response.PageResponse;
 import entity.User;
 import entity.UserRole;
@@ -76,6 +77,35 @@ public class UserRepository {
         }
     }
 
+    public int createAdmin(String username, String passwordHash) {
+        String sql = "INSERT INTO users (username, password_hash, role) "
+                + "VALUES (?, ?, 'ADMIN'::user_role)";
+        Connection connection = null;
+
+        try {
+            connection = dbConnectionPool.getConnection();
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    sql,
+                    Statement.RETURN_GENERATED_KEYS
+            )) {
+                preparedStatement.setString(1, username);
+                preparedStatement.setString(2, passwordHash);
+                preparedStatement.executeUpdate();
+
+                try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
+                    if (generatedKeys.next())
+                        return generatedKeys.getInt(1);
+                    else
+                        throw new SQLException("Creating admin failed, no ID obtained.");
+                }
+            }
+        } catch (SQLException | InterruptedException e) {
+            throw new RuntimeException("Error creating admin!", e);
+        } finally {
+            dbConnectionPool.releaseConnection(connection);
+        }
+    }
+
     public Optional<User> findByUsername(String username) {
         String sql = "SELECT * FROM users WHERE username = ?";
         Connection connection = null;
@@ -124,6 +154,38 @@ public class UserRepository {
         } finally {
             dbConnectionPool.releaseConnection(connection);
         }
+    }
+
+    public List<LeaderboardEntry> getTopPlayers(int limit) {
+        String sql = "SELECT username, elo_rating, match_count "
+                + "FROM users "
+                + "ORDER BY elo_rating DESC, match_count DESC LIMIT ?";
+        List<LeaderboardEntry> result = new ArrayList<>();
+        Connection connection = null;
+
+        try {
+            connection = dbConnectionPool.getConnection();
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                preparedStatement.setInt(1, limit);
+
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    int rank = 1;
+                    while (resultSet.next()) {
+                        result.add(new LeaderboardEntry(
+                                rank++,
+                                resultSet.getString("username"),
+                                resultSet.getInt("elo_rating"),
+                                resultSet.getInt("match_count")
+                        ));
+                    }
+                }
+            }
+        } catch (SQLException | InterruptedException e) {
+            throw new RuntimeException("Error getting top players!", e);
+        } finally {
+            dbConnectionPool.releaseConnection(connection);
+        }
+        return result;
     }
 
     public PageResponse<User> findAll(FindUsersRequest request) {

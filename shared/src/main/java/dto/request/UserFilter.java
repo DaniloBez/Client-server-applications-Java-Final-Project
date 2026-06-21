@@ -1,7 +1,5 @@
 package dto.request;
 
-import java.time.LocalDateTime;
-
 public record UserFilter(
         String nameLike,
         String userRole,
@@ -10,7 +8,7 @@ public record UserFilter(
         Integer maxElo,
         Integer minMatchCount,
         Integer maxMatchCount,
-        LocalDateTime createdAtFrom,
-        LocalDateTime createdAtTo
+        String createdAtFrom,
+        String createdAtTo
 ) {
 }

@@ -46,9 +46,8 @@ public class Server {
 
     private AtomicBoolean isTcpServerRun = new AtomicBoolean(false);
     private TcpServer tcpServer;
-    private HttpAuthServer httpAuthServer;
+    private final HttpAuthServer httpAuthServer;
 
-    private final AuthService authService;
     private final GameManager gameManager;
     private final LobbyService lobbyService;
     private final Processor processor;
@@ -93,10 +92,14 @@ public class Server {
         this.lobbyService = new LobbyService(this.gameManager);
         this.lobbyService.setMessageDispatcher(asyncDispatcher);
 
-        this.authService = new AuthService(userRepository, jwtSecret);
-        this.httpAuthServer = new HttpAuthServer(httpPort, this.authService);
+        AuthService authService = new AuthService(userRepository, jwtSecret);
+        this.httpAuthServer = new HttpAuthServer(
+                httpPort,
+                authService,
+                this.connectionManager
+        );
 
-        this.processor = new Processor(this.lobbyService, this.gameManager, this.authService);
+        this.processor = new Processor(this.lobbyService, this.gameManager, authService);
         this.processorCount = processorCount;
 
         this.port = tcpPort;

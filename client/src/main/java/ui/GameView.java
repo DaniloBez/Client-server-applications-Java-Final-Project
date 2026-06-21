@@ -7,23 +7,25 @@ import dto.response.MatchEndedResponse;
 import dto.response.MatchFoundResponse;
 import dto.response.PlayerMoveResponse;
 import dto.response.RoundEndedResponse;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.animation.Animation;
+import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
-import javafx.geometry.Bounds;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Line;
+import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 import protocols.ClientTcp;
@@ -44,13 +46,14 @@ public class GameView extends StackPane {
     private final Label playersLabel;
 
     private final Button[][] buttons = new Button[3][3];
-    private final Line winningLine;
+    private final List<Animation> activeAnimations = new ArrayList<>();
 
     private boolean isMyTurn = false;
     private boolean isX = false;
     private byte myScore = 0;
     private byte opponentScore = 0;
     private boolean isRoundTransition = false;
+    private boolean isWinningAnimationPlaying = false;
 
     private final Label timerLabel;
     private int timeLeft = 60;
@@ -68,44 +71,54 @@ public class GameView extends StackPane {
         waitingScreen = new VBox(20);
         waitingScreen.setAlignment(Pos.CENTER);
         ProgressIndicator spinner = new ProgressIndicator();
+        spinner.setMaxSize(60, 60);
         Label waitingLabel = new Label("Очікування суперника...");
         waitingLabel.getStyleClass().add("title-label");
+        Label waitingHint = new Label("Шукаємо гідного противника для вас");
+        waitingHint.getStyleClass().add("stat-label");
         Button cancelSearchBtn = new Button("Скасувати пошук");
         cancelSearchBtn.getStyleClass().add("danger-button");
         cancelSearchBtn.setOnAction(_ -> {
             sendLeaveLobby();
             onLeave.run();
         });
-        waitingScreen.getChildren().addAll(spinner, waitingLabel, cancelSearchBtn);
+        waitingScreen.getChildren().addAll(
+                spinner, waitingLabel, waitingHint, cancelSearchBtn
+        );
 
-        gameScreen = new VBox(20);
+        gameScreen = new VBox(18);
         gameScreen.setAlignment(Pos.CENTER);
         gameScreen.setVisible(false);
 
         playersLabel = new Label();
         playersLabel.getStyleClass().add("stat-label");
+        playersLabel.setStyle("-fx-font-size: 15px;");
+
         scoreLabel = new Label("0 : 0");
-        scoreLabel.getStyleClass().add("title-label");
+        scoreLabel.setStyle(
+                "-fx-font-size: 36px; -fx-font-weight: bold;"
+                + " -fx-text-fill: white;"
+        );
+
         statusLabel = new Label();
         statusLabel.getStyleClass().add("stat-label");
-        
-        timerLabel = new Label("Час: 60");
-        timerLabel.getStyleClass().add("stat-label");
-        timerLabel.setStyle("-fx-text-fill: #e74c3c;");
+        statusLabel.setStyle("-fx-font-size: 15px;");
+
+        timerLabel = new Label("⏱ 60");
+        timerLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
         HBox statusBox = new HBox(20, statusLabel, timerLabel);
         statusBox.setAlignment(Pos.CENTER);
 
-        StackPane boardPane = new StackPane();
         GridPane boardGrid = new GridPane();
         boardGrid.setAlignment(Pos.CENTER);
-        boardGrid.setHgap(5);
-        boardGrid.setVgap(5);
+        boardGrid.setHgap(8);
+        boardGrid.setVgap(8);
 
         for (byte r = 0; r < 3; r++) {
             for (byte col = 0; col < 3; col++) {
                 Button btn = new Button("");
-                btn.setPrefSize(100, 100);
+                btn.setPrefSize(105, 105);
                 btn.getStyleClass().add("board-button");
                 final byte row = r;
                 final byte column = col;
@@ -115,35 +128,35 @@ public class GameView extends StackPane {
             }
         }
 
-        winningLine = new Line();
-        winningLine.setStrokeWidth(8);
-        winningLine.setStyle("-fx-stroke: #2ecc71; -fx-stroke-linecap: round;");
-        winningLine.setVisible(false);
-
-        Group boardGroup = new Group(boardGrid, winningLine);
-
-        boardPane.getChildren().add(boardGroup);
-
-        gameScreen.getChildren().addAll(playersLabel, scoreLabel, statusBox, boardPane);
+        gameScreen.getChildren().addAll(
+                playersLabel, scoreLabel, statusBox, boardGrid
+        );
 
         getChildren().addAll(waitingScreen, gameScreen);
 
         turnTimer = new Timeline(new KeyFrame(Duration.seconds(1), _ -> {
             if (!matchEnded && !waitingScreen.isVisible()) {
                 timeLeft--;
-                timerLabel.setText("Час: " + timeLeft);
+                timerLabel.setText("⏱ " + timeLeft);
+                if (timeLeft <= 10) {
+                    timerLabel.setStyle(
+                            "-fx-text-fill: #ff6b6b; -fx-font-weight: bold;"
+                            + " -fx-font-size: 18px;"
+                    );
+                }
                 if (timeLeft <= 0) {
-                    timerLabel.setText("Час вичерпано!");
+                    timerLabel.setText("⏱ Час вичерпано!");
                     turnTimer.stop();
-                    
+
                     if (isMyTurn) {
                         matchEnded = true;
-                        Alert alert = new Alert(Alert.AlertType.WARNING);
-                        alert.setTitle("Поразка");
-                        alert.setHeaderText("Час вичерпано!");
-                        alert.setContentText("Ви програли через бездіяльність.");
-                        alert.setOnHidden(_ -> onLeave.run());
-                        alert.show();
+                        StyledDialog.show(
+                                this,
+                                StyledDialog.DialogType.WARNING,
+                                "Час вичерпано!",
+                                "Ви програли через бездіяльність.",
+                                onLeave
+                        );
                     }
                 }
             }
@@ -153,12 +166,13 @@ public class GameView extends StackPane {
         PauseTransition lobbyTimeout = new PauseTransition(Duration.seconds(5));
         lobbyTimeout.setOnFinished(_ -> {
             if (!isConnectedToLobby && waitingScreen.isVisible()) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Помилка");
-                alert.setHeaderText("Не вдалося підключитися до сервера");
-                alert.setContentText("Сервер не відповідає. Перевірте IP та порт.");
-                alert.setOnHidden(ev -> onLeave.run());
-                alert.show();
+                StyledDialog.show(
+                        this,
+                        StyledDialog.DialogType.ERROR,
+                        "Не вдалося підключитися",
+                        "Сервер не відповідає. Перевірте IP та порт.",
+                        onLeave
+                );
             }
         });
         lobbyTimeout.play();
@@ -206,11 +220,12 @@ public class GameView extends StackPane {
     public void handleMatchFound(MatchFoundResponse response) {
         Platform.runLater(() -> {
             playersLabel.setText(
-                    "Ви граєте проти: "
-                    + response.opponentName()
-                    + " ("
-                    + response.opponentElo()
-                    + ")"
+                    "Проти: "
+                            + (response.opponentName() != null
+                            ? response.opponentName() : "Невідомо")
+                            + " (Elo "
+                            + response.opponentElo()
+                            + ")"
             );
             isX = response.isYouX();
             isMyTurn = response.isYourTurn();
@@ -222,7 +237,7 @@ public class GameView extends StackPane {
             updateScoreLabel();
             updateStatusLabel();
             resetBoard();
-            
+
             waitingScreen.setVisible(false);
             gameScreen.setVisible(true);
 
@@ -233,10 +248,23 @@ public class GameView extends StackPane {
 
     public void handlePlayerMove(PlayerMoveResponse response) {
         Platform.runLater(() -> {
+            boolean isMoveX = response.isX();
             Button button = buttons[response.row()][response.col()];
-            String color = response.isX() ? "#e74c3c" : "#3498db";
-            button.setText(response.isX() ? "X" : "O");
-            button.setStyle("-fx-text-fill: " + color + ";");
+            button.setText(isMoveX ? "X" : "O");
+            button.setStyle(
+                    "-fx-text-fill: " + (isMoveX ? "#ff6b6b" : "#4dabf7") + ";"
+                            + " -fx-font-weight: bold;"
+            );
+
+            ScaleTransition pop = new ScaleTransition(
+                    Duration.millis(150), button
+            );
+            pop.setFromX(0.7);
+            pop.setFromY(0.7);
+            pop.setToX(1.0);
+            pop.setToY(1.0);
+            pop.play();
+            activeAnimations.add(pop);
 
             if (!isRoundTransition && !matchEnded) {
                 isMyTurn = response.isYourTurn();
@@ -244,7 +272,7 @@ public class GameView extends StackPane {
                 resetTimer();
             }
 
-            drawWinningLineIfAny();
+            highlightWinningCells();
         });
     }
 
@@ -254,16 +282,24 @@ public class GameView extends StackPane {
             isMyTurn = false;
             isX = response.isYourMove();
 
-            boolean isDraw = response.yourScore() == myScore 
+            boolean isDraw = response.yourScore() == myScore
                     && response.opponentScore() == opponentScore;
-            statusLabel.setText(Boolean.TRUE.equals(response.isYouWinner()) ? "Раунд виграно!" 
-                    : isDraw ? "Нічия у раунді!" : "Раунд програно!");
+
+            String roundResult;
+            if (Boolean.TRUE.equals(response.isYouWinner()))
+                roundResult = "🎉 Раунд виграно!";
+            else if (isDraw)
+                roundResult = "🤝 Нічия у раунді!";
+            else
+                roundResult = "Раунд програно!";
+
+            statusLabel.setText(roundResult);
 
             myScore = response.yourScore();
             opponentScore = response.opponentScore();
             updateScoreLabel();
-            
-            drawWinningLineIfAny();
+
+            highlightWinningCells();
 
             PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
             pause.setOnFinished(_ -> {
@@ -284,116 +320,196 @@ public class GameView extends StackPane {
             matchEnded = true;
             isMyTurn = false;
             turnTimer.stop();
-            
+
             myScore = response.yourFinalScore();
             opponentScore = response.opponentFinalScore();
             updateScoreLabel();
 
-            drawWinningLineIfAny();
+            highlightWinningCells();
 
             PauseTransition pause = new PauseTransition(Duration.seconds(2.5));
             pause.setOnFinished(_ -> {
-                String result = Boolean.TRUE.equals(response.isYouWinner()) ? "Перемога!" 
-                        : Boolean.FALSE.equals(response.isYouWinner()) ? "Поразка!" : "Нічия!";
-                String delta = (response.eloDelta() > 0 ? "+" : "") + response.eloDelta();
-                
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Матч завершено");
-                alert.setHeaderText(result);
-                alert.setContentText(String.format("Зміна Elo: %s", delta));
-                
-                alert.setOnHidden(_ -> onLeave.run());
-                alert.show();
+                String result;
+                StyledDialog.DialogType dlgType;
+                if (Boolean.TRUE.equals(response.isYouWinner())) {
+                    result = "🏆 Перемога!";
+                    dlgType = StyledDialog.DialogType.SUCCESS;
+                } else if (Boolean.FALSE.equals(response.isYouWinner())) {
+                    result = "Поразка";
+                    dlgType = StyledDialog.DialogType.ERROR;
+                } else {
+                    result = "🤝 Нічия!";
+                    dlgType = StyledDialog.DialogType.INFO;
+                }
+                String delta = (response.eloDelta() > 0 ? "+" : "")
+                        + response.eloDelta();
+
+                StyledDialog.show(
+                        this,
+                        dlgType,
+                        result,
+                        "Зміна Elo: " + delta,
+                        onLeave
+                );
             });
             pause.play();
         });
     }
 
     public void handleError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Помилка");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.show();
+        Platform.runLater(() ->
+                StyledDialog.show(
+                        this,
+                        StyledDialog.DialogType.ERROR,
+                        "Помилка",
+                        message
+                )
+        );
     }
 
     private void updateScoreLabel() {
-        scoreLabel.setText(String.format("%d : %d", myScore, opponentScore));
+        scoreLabel.setText(
+                String.format("%d : %d", myScore, opponentScore)
+        );
     }
 
     private void updateStatusLabel() {
         if (!matchEnded) {
             String role = isX ? "X" : "O";
-            statusLabel.setText(isMyTurn ? "Ваш хід (Ви " + role + ")" : "Хід суперника...");
-            statusLabel.setStyle("");
+            if (isMyTurn) {
+                statusLabel.setText("🟢 Ваш хід (Ви " + role + ")");
+                statusLabel.setStyle(
+                        "-fx-font-size: 15px; -fx-text-fill: #51cf66;"
+                );
+            } else {
+                statusLabel.setText("⏳ Хід суперника...");
+                statusLabel.setStyle(
+                        "-fx-font-size: 15px; -fx-text-fill: #c0c5ce;"
+                );
+            }
         }
     }
 
     private void resetTimer() {
         timeLeft = 60;
-        timerLabel.setText("Час: 60");
+        timerLabel.setText("⏱ 60");
+        timerLabel.setStyle(
+                "-fx-text-fill: #ff6b6b; -fx-font-weight: bold;"
+                + " -fx-font-size: 16px;"
+        );
     }
 
     private void resetBoard() {
-        winningLine.setVisible(false);
+        isWinningAnimationPlaying = false;
+        for (Animation anim : activeAnimations) {
+            anim.stop();
+        }
+        activeAnimations.clear();
+
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
                 buttons[row][col].setText("");
                 buttons[row][col].setStyle("");
+                buttons[row][col].setEffect(null);
+                buttons[row][col].setOpacity(1.0);
+                buttons[row][col].setScaleX(1.0);
+                buttons[row][col].setScaleY(1.0);
             }
         }
     }
 
-    private void drawWinningLineIfAny() {
-        String[][] board = new String[3][3];
-        for (int row = 0; row < 3; row++) 
-            for (int column = 0; column < 3; column++) 
-                board[row][column] = buttons[row][column].getText();
+    private void highlightWinningCells() {
+        if (isWinningAnimationPlaying) return;
         
+        int[] winCells = findWinningCells();
+        if (winCells == null) return;
+
+        isWinningAnimationPlaying = true;
+
+        for (Animation anim : activeAnimations)
+            anim.stop();
+
+        activeAnimations.clear();
+
+        DropShadow dropShadow = new DropShadow();
+        dropShadow.setColor(Color.web("#51cf66"));
+        dropShadow.setRadius(20);
+        dropShadow.setSpread(0.4);
+
         for (int row = 0; row < 3; row++) {
-            if (!board[row][0].isEmpty() 
-                    && board[row][0].equals(board[row][1]) 
-                    && board[row][0].equals(board[row][2])
-            ) {
-                setLineCoords(row, 0, row, 2);
-                return;
-            }
-        }
+            for (int col = 0; col < 3; col++) {
+                boolean isWin = false;
+                for (int i = 0; i < winCells.length; i += 2) {
+                    if (winCells[i] == row && winCells[i + 1] == col) {
+                        isWin = true;
+                        break;
+                    }
+                }
+                if (isWin) {
+                    buttons[row][col].setEffect(dropShadow);
+                    String currentStyle = buttons[row][col].getStyle();
+                    buttons[row][col].setStyle(
+                            currentStyle
+                            + " -fx-background-color: rgba(81, 207, 102, 0.25);"
+                            + " -fx-border-color: #51cf66;"
+                            + " -fx-border-width: 3;"
+                            + " -fx-border-radius: 12;"
+                            + " -fx-background-radius: 12;"
+                    );
 
-        for (int column = 0; column < 3; column++) {
-            if (!board[0][column].isEmpty() 
-                    && board[0][column].equals(board[1][column]) 
-                    && board[0][column].equals(board[2][column])
-            ) {
-                setLineCoords(0, column, 2, column);
-                return;
+                    ScaleTransition pulse = new ScaleTransition(
+                            Duration.millis(400), buttons[row][col]
+                    );
+                    pulse.setFromX(1.0);
+                    pulse.setFromY(1.0);
+                    pulse.setToX(1.1);
+                    pulse.setToY(1.1);
+                    pulse.setCycleCount(Animation.INDEFINITE);
+                    pulse.setAutoReverse(true);
+                    pulse.play();
+                    activeAnimations.add(pulse);
+                } else {
+                    FadeTransition dim = new FadeTransition(
+                            Duration.millis(300), buttons[row][col]
+                    );
+                    dim.setToValue(0.2);
+                    dim.play();
+                    activeAnimations.add(dim);
+                }
             }
-        }
-
-        if (!board[0][0].isEmpty() 
-                && board[0][0].equals(board[1][1]) 
-                && board[0][0].equals(board[2][2])
-        ) {
-            setLineCoords(0, 0, 2, 2);
-            return;
-        }
-        if (!board[0][2].isEmpty() 
-                && board[0][2].equals(board[1][1]) 
-                && board[0][2].equals(board[2][0])
-        ) {
-            setLineCoords(0, 2, 2, 0);
         }
     }
 
-    private void setLineCoords(int row1, int column1, int row2, int column2) {
-        Bounds bound1 = buttons[row1][column1].getBoundsInParent();
-        Bounds bound2 = buttons[row2][column2].getBoundsInParent();
-        
-        winningLine.setStartX(bound1.getMinX() + bound1.getWidth() / 2);
-        winningLine.setStartY(bound1.getMinY() + bound1.getHeight() / 2);
-        winningLine.setEndX(bound2.getMinX() + bound2.getWidth() / 2);
-        winningLine.setEndY(bound2.getMinY() + bound2.getHeight() / 2);
-        winningLine.setVisible(true);
-        winningLine.toFront();
+    private int[] findWinningCells() {
+        String[][] board = new String[3][3];
+        for (int r = 0; r < 3; r++)
+            for (int c = 0; c < 3; c++)
+                board[r][c] = buttons[r][c].getText();
+
+        for (int r = 0; r < 3; r++) {
+            if (!board[r][0].isEmpty()
+                    && board[r][0].equals(board[r][1])
+                    && board[r][0].equals(board[r][2])) {
+                return new int[]{r, 0, r, 1, r, 2};
+            }
+        }
+        for (int c = 0; c < 3; c++) {
+            if (!board[0][c].isEmpty()
+                    && board[0][c].equals(board[1][c])
+                    && board[0][c].equals(board[2][c])) {
+                return new int[]{0, c, 1, c, 2, c};
+            }
+        }
+        if (!board[0][0].isEmpty()
+                && board[0][0].equals(board[1][1])
+                && board[0][0].equals(board[2][2])) {
+            return new int[]{0, 0, 1, 1, 2, 2};
+        }
+        if (!board[0][2].isEmpty()
+                && board[0][2].equals(board[1][1])
+                && board[0][2].equals(board[2][0])) {
+            return new int[]{0, 2, 1, 1, 2, 0};
+        }
+        return null;
     }
 }

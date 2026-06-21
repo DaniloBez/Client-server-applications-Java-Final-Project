@@ -2,6 +2,8 @@ package server.session;
 
 import dto.Commands;
 import dto.Message;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import lombok.Setter;
@@ -51,5 +53,24 @@ public class ConnectionManager {
 
         activeConnections.clear();
         log.info("All connections closed.");
+    }
+
+    public void disconnect(int userId) {
+        String connectionId = SessionRegistry.getConnectionId(userId);
+        if (connectionId != null) {
+            Sender sender = activeConnections.remove(connectionId);
+            if (sender != null) {
+                sender.close();
+            }
+            SessionRegistry.remove(connectionId);
+            log.info("Disconnected user {}", userId);
+        }
+    }
+
+    public List<Integer> getActiveUserIds() {
+        return activeConnections.keySet().stream()
+                .map(SessionRegistry::getUserId)
+                .filter(Objects::nonNull)
+                .toList();
     }
 }
