@@ -14,8 +14,8 @@ javafx {
 
 dependencies {
     implementation(project(":shared"))
-    implementation("tools.jackson.core:jackson-core:3.1.4")
-    implementation("tools.jackson.core:jackson-databind:3.1.4")
+    implementation("tools.jackson.core:jackson-core:3.2.0")
+    implementation("tools.jackson.core:jackson-databind:3.2.0")
 
     val javaFxVersion = "25"
     val platforms = listOf("win", "mac", "mac-aarch64", "linux")
