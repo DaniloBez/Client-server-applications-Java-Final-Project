@@ -159,6 +159,7 @@ public class UserRepository {
     public List<LeaderboardEntry> getTopPlayers(int limit) {
         String sql = "SELECT username, elo_rating, match_count "
                 + "FROM users "
+                + "WHERE is_banned = false "
                 + "ORDER BY elo_rating DESC, match_count DESC LIMIT ?";
         List<LeaderboardEntry> result = new ArrayList<>();
         Connection connection = null;

@@ -58,11 +58,11 @@ public class ConnectionManager {
     public void disconnect(int userId) {
         String connectionId = SessionRegistry.getConnectionId(userId);
         if (connectionId != null) {
-            Sender sender = activeConnections.remove(connectionId);
-            if (sender != null) {
+            Sender sender = activeConnections.get(connectionId);
+            if (sender != null)
                 sender.close();
-            }
-            SessionRegistry.remove(connectionId);
+
+            removeConnection(connectionId);
             log.info("Disconnected user {}", userId);
         }
     }

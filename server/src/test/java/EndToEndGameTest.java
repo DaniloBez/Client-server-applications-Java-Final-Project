@@ -8,6 +8,7 @@ import decryptor.MessageDecryptor;
 import dto.Commands;
 import dto.Message;
 import dto.request.AuthConnectionRequest;
+import dto.request.BanRequest;
 import dto.request.PlayerMoveRequest;
 import dto.request.UserRequest;
 import dto.response.JwtTokenResponse;
@@ -35,6 +36,7 @@ import protocols.ClientTcp;
 import repository.MatchRepository;
 import repository.UserRepository;
 import server.Server;
+import service.UserService;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 import utils.DbConnectionPool;
@@ -483,15 +485,35 @@ public class EndToEndGameTest {
 
         player1Client.disconnect();
 
-        Message p2EndMessage = expectMessage(player2Messages, Commands.MATCH_ENDED);
-        assertNotNull(p2EndMessage, "P2 should receive MATCH_ENDED after opponent disconnects");
-
-        MatchEndedResponse p2EndData = mapper.readValue(
-                p2EndMessage.getData(), MatchEndedResponse.class
+        Message player2EndMessage = expectMessage(player2Messages, Commands.MATCH_ENDED);
+        assertNotNull(
+                player2EndMessage,
+                "P2 should receive MATCH_ENDED after opponent disconnects"
         );
-        assertTrue(p2EndData.isYouWinner(), "Player 2 should win by technical defeat");
+
+        MatchEndedResponse player2EndData = mapper.readValue(
+                player2EndMessage.getData(), MatchEndedResponse.class
+        );
+        assertTrue(player2EndData.isYouWinner(), "Player 2 should win by technical defeat");
 
         player2Client.disconnect();
+    }
+
+    private String login(String username, String password) throws Exception {
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            UserRequest req = new UserRequest(username, password);
+            String body = mapper.writeValueAsString(req);
+            HttpRequest loginRequest = HttpRequest.newBuilder()
+                    .uri(new URI("http://localhost:8080/login"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            HttpResponse<String> loginResp = client.send(
+                    loginRequest, HttpResponse.BodyHandlers.ofString()
+            );
+            JwtTokenResponse tokenResp = mapper.readValue(loginResp.body(), JwtTokenResponse.class);
+            return tokenResp.token();
+        }
     }
 
     private String registerAndLogin(String username, String password) throws Exception {
@@ -519,5 +541,116 @@ public class EndToEndGameTest {
             return tokenResp.token();
 
         }
+    }
+
+    @Test
+    public void testBanDuringGame() throws Exception {
+        LinkedBlockingQueue<Message> player1Messages = new LinkedBlockingQueue<>();
+        LinkedBlockingQueue<Message> player2Messages = new LinkedBlockingQueue<>();
+
+        ClientTcp player1Client = new ClientTcp(
+                new MessageEncryptor(),
+                new MessageDecryptor(),
+                player1Messages::offer
+        );
+
+        ClientTcp player2Client = new ClientTcp(
+                new MessageEncryptor(),
+                new MessageDecryptor(),
+                player2Messages::offer
+        );
+
+        player1Client.connect(InetAddress.getByName("localhost"), 8081);
+        player2Client.connect(InetAddress.getByName("localhost"), 8081);
+        UserRepository userRepository = new UserRepository(dbConnectionPool);
+        UserService userService = new UserService(userRepository, "test-secret");
+        userService.createAdmin("AdminOp", "pass");
+        String adminToken = login("AdminOp", "pass");
+
+        String token1 = registerAndLogin("BanTarget", "pass");
+        String token2 = registerAndLogin("InnocentP", "pass");
+
+        player1Client.sendCommand(new Message(
+                (byte) 1,
+                300L,
+                Commands.AUTH_CONNECTION,
+                1,
+                mapper.writeValueAsString(new AuthConnectionRequest(1, token1))
+        ));
+        Message player1AuthResponse = expectMessage(player1Messages, Commands.AUTH_CONNECTION);
+        assertNotNull(player1AuthResponse);
+        int user1 = player1AuthResponse.getUserId();
+
+        player2Client.sendCommand(new Message(
+                (byte) 1,
+                301L,
+                Commands.AUTH_CONNECTION,
+                2,
+                mapper.writeValueAsString(new AuthConnectionRequest(2, token2))
+        ));
+        Message player2AuthResponse = expectMessage(player2Messages, Commands.AUTH_CONNECTION);
+        assertNotNull(player2AuthResponse);
+        int user2 = player2AuthResponse.getUserId();
+
+        player1Client.sendCommand(new Message((byte) 1, 302L, Commands.JOIN_LOBBY, user1, ""));
+        player2Client.sendCommand(new Message((byte) 1, 303L, Commands.JOIN_LOBBY, user2, ""));
+
+        expectMessage(player1Messages, Commands.JOIN_LOBBY);
+        expectMessage(player2Messages, Commands.JOIN_LOBBY);
+
+        expectMessage(player1Messages, Commands.MATCH_FOUND);
+        expectMessage(player2Messages, Commands.MATCH_FOUND);
+        
+        BanRequest banReq = new BanRequest(user1, true);
+        String banBody = mapper.writeValueAsString(banReq);
+
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            HttpRequest banHttpRequest = HttpRequest.newBuilder()
+                    .uri(new URI("http://localhost:8080/admin/ban"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .POST(HttpRequest.BodyPublishers.ofString(banBody))
+                    .build();
+            client.send(banHttpRequest, HttpResponse.BodyHandlers.ofString());
+        }
+
+        Message player2EndMessage = expectMessage(player2Messages, Commands.MATCH_ENDED);
+        assertNotNull(
+                player2EndMessage, 
+                "Innocent player should receive MATCH_ENDED after opponent is banned"
+        );
+
+        MatchEndedResponse player2EndData = mapper.readValue(
+                player2EndMessage.getData(), MatchEndedResponse.class
+        );
+        assertTrue(player2EndData.isYouWinner(), "Innocent player should win by technical defeat");
+        
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            UserRequest req = new UserRequest("BanTarget", "pass");
+            String body = mapper.writeValueAsString(req);
+            HttpRequest loginRequest = HttpRequest.newBuilder()
+                    .uri(new URI("http://localhost:8080/login"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            HttpResponse<String> loginResp = client.send(
+                    loginRequest, HttpResponse.BodyHandlers.ofString()
+            );
+            assertEquals(403, loginResp.statusCode(), "Banned user should get 403 Forbidden");
+        }
+        
+        player1Client.sendCommand(new Message(
+                (byte) 1,
+                304L,
+                Commands.AUTH_CONNECTION,
+                2,
+                mapper.writeValueAsString(new AuthConnectionRequest(2, token1))
+        ));
+        
+        Message player1ReAuthResponse = expectMessage(player1Messages, 401);
+        assertNotNull(player1ReAuthResponse, "Banned player should receive an ERROR on reconnect");
+
+        player1Client.disconnect();
+        player2Client.disconnect();
     }
 }

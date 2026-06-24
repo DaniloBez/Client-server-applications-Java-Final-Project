@@ -19,7 +19,7 @@ public class TcpSender implements Sender {
             out.write(message);
             out.flush();
         } catch (IOException e) {
-            log.error("Failed to send data to TCP socket");
+            log.error("Failed to send data to TCP socket", e);
         }
     }
 
