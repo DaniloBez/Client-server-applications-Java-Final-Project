@@ -53,7 +53,7 @@ public class GameView extends StackPane {
 
     private boolean isMyTurn = false;
     private boolean isX = false;
-    private boolean amIFirst = false;
+    private boolean amFirst = false;
     private byte myScore = 0;
     private byte opponentScore = 0;
     private boolean isRoundTransition = false;
@@ -236,7 +236,7 @@ public class GameView extends StackPane {
             );
             isX = response.isYouX();
             isMyTurn = response.isYourTurn();
-            amIFirst = response.isYourTurn();
+            amFirst = response.isYourTurn();
             myScore = 0;
             opponentScore = 0;
             matchEnded = false;
@@ -257,8 +257,8 @@ public class GameView extends StackPane {
     public void handlePlayerMove(PlayerMoveResponse response) {
         Platform.runLater(() -> {
             boolean isMoveX = response.isX();
-            boolean isMyMove = (isMoveX == isX);
-            boolean isMoveByFirst = (isMyMove && amIFirst) || (!isMyMove && !amIFirst);
+            boolean isMyMove = !response.isYourTurn();
+            boolean isMoveByFirst = (isMyMove && amFirst) || (!isMyMove && !amFirst);
             Button button = buttons[response.row()][response.col()];
             button.setText(isMoveX ? "X" : "O");
             button.getStyleClass().removeAll("game-cell-first", "game-cell-second");
@@ -376,8 +376,8 @@ public class GameView extends StackPane {
     }
 
     private void updateScoreLabel() {
-        byte firstScore = amIFirst ? myScore : opponentScore;
-        byte secondScore = amIFirst ? opponentScore : myScore;
+        byte firstScore = amFirst ? myScore : opponentScore;
+        byte secondScore = amFirst ? opponentScore : myScore;
 
         scoreLabel.setText(
                 String.format("%d : %d", firstScore, secondScore)
@@ -421,7 +421,7 @@ public class GameView extends StackPane {
             if (isMyTurn) {
                 statusLabel.setText("🟢 Ваш хід (Ви " + role + ")");
                 statusLabel.getStyleClass().add(
-                        amIFirst ? "game-status-first" : "game-status-second"
+                        amFirst ? "game-status-first" : "game-status-second"
                 );
             } else {
                 statusLabel.setText("⏳ Хід суперника...");
