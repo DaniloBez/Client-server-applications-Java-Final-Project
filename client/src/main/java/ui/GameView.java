@@ -92,20 +92,17 @@ public class GameView extends StackPane {
 
         playersLabel = new Label();
         playersLabel.getStyleClass().add("stat-label");
-        playersLabel.setStyle("-fx-font-size: 15px;");
+        playersLabel.getStyleClass().add("game-players-label");
 
         scoreLabel = new Label("0 : 0");
-        scoreLabel.setStyle(
-                "-fx-font-size: 36px; -fx-font-weight: bold;"
-                + " -fx-text-fill: white;"
-        );
+        scoreLabel.getStyleClass().add("game-score-label");
 
         statusLabel = new Label();
         statusLabel.getStyleClass().add("stat-label");
-        statusLabel.setStyle("-fx-font-size: 15px;");
+        statusLabel.getStyleClass().add("game-status-label");
 
         timerLabel = new Label("⏱ 60");
-        timerLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        timerLabel.getStyleClass().add("game-timer-label");
 
         HBox statusBox = new HBox(20, statusLabel, timerLabel);
         statusBox.setAlignment(Pos.CENTER);
@@ -139,10 +136,8 @@ public class GameView extends StackPane {
                 timeLeft--;
                 timerLabel.setText("⏱ " + timeLeft);
                 if (timeLeft <= 10) {
-                    timerLabel.setStyle(
-                            "-fx-text-fill: #ff6b6b; -fx-font-weight: bold;"
-                            + " -fx-font-size: 18px;"
-                    );
+                    timerLabel.getStyleClass().removeAll("game-timer-normal");
+                    timerLabel.getStyleClass().add("game-timer-warning");
                 }
                 if (timeLeft <= 0) {
                     timerLabel.setText("⏱ Час вичерпано!");
@@ -251,10 +246,8 @@ public class GameView extends StackPane {
             boolean isMoveX = response.isX();
             Button button = buttons[response.row()][response.col()];
             button.setText(isMoveX ? "X" : "O");
-            button.setStyle(
-                    "-fx-text-fill: " + (isMoveX ? "#ff6b6b" : "#4dabf7") + ";"
-                            + " -fx-font-weight: bold;"
-            );
+            button.getStyleClass().removeAll("game-cell-x", "game-cell-o");
+            button.getStyleClass().add(isMoveX ? "game-cell-x" : "game-cell-o");
 
             ScaleTransition pop = new ScaleTransition(
                     Duration.millis(150), button
@@ -378,14 +371,20 @@ public class GameView extends StackPane {
             String role = isX ? "X" : "O";
             if (isMyTurn) {
                 statusLabel.setText("🟢 Ваш хід (Ви " + role + ")");
-                statusLabel.setStyle(
-                        "-fx-font-size: 15px; -fx-text-fill: #51cf66;"
+                statusLabel.getStyleClass().removeAll(
+                        "game-status-lose",
+                        "game-status-win",
+                        "game-status-label"
                 );
+                statusLabel.getStyleClass().add("game-status-win");
             } else {
                 statusLabel.setText("⏳ Хід суперника...");
-                statusLabel.setStyle(
-                        "-fx-font-size: 15px; -fx-text-fill: #c0c5ce;"
+                statusLabel.getStyleClass().removeAll(
+                        "game-status-lose",
+                        "game-status-win",
+                        "game-status-label"
                 );
+                statusLabel.getStyleClass().add("game-status-label");
             }
         }
     }
@@ -393,10 +392,8 @@ public class GameView extends StackPane {
     private void resetTimer() {
         timeLeft = 60;
         timerLabel.setText("⏱ 60");
-        timerLabel.setStyle(
-                "-fx-text-fill: #ff6b6b; -fx-font-weight: bold;"
-                + " -fx-font-size: 16px;"
-        );
+        timerLabel.getStyleClass().removeAll("game-timer-warning");
+        timerLabel.getStyleClass().add("game-timer-normal");
     }
 
     private void resetBoard() {
@@ -409,7 +406,11 @@ public class GameView extends StackPane {
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
                 buttons[row][col].setText("");
-                buttons[row][col].setStyle("");
+                buttons[row][col].getStyleClass().removeAll(
+                        "game-cell-x",
+                        "game-cell-o",
+                        "game-cell-win"
+                );
                 buttons[row][col].setEffect(null);
                 buttons[row][col].setOpacity(1.0);
                 buttons[row][col].setScaleX(1.0);
@@ -447,15 +448,7 @@ public class GameView extends StackPane {
                 }
                 if (isWin) {
                     buttons[row][col].setEffect(dropShadow);
-                    String currentStyle = buttons[row][col].getStyle();
-                    buttons[row][col].setStyle(
-                            currentStyle
-                            + " -fx-background-color: rgba(81, 207, 102, 0.25);"
-                            + " -fx-border-color: #51cf66;"
-                            + " -fx-border-width: 3;"
-                            + " -fx-border-radius: 12;"
-                            + " -fx-background-radius: 12;"
-                    );
+                    buttons[row][col].getStyleClass().add("game-cell-win");
 
                     ScaleTransition pulse = new ScaleTransition(
                             Duration.millis(400), buttons[row][col]

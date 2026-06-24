@@ -1,6 +1,6 @@
 package entity;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,5 +18,5 @@ public class User {
     private int matchCount;
     private int eloRating;
     private boolean isBanned;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

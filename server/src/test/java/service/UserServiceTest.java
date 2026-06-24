@@ -12,7 +12,7 @@ import static org.mockito.Mockito.when;
 import dto.response.LeaderboardEntry;
 import entity.User;
 import entity.UserRole;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,15 +20,15 @@ import org.junit.jupiter.api.Test;
 import org.mindrot.jbcrypt.BCrypt;
 import repository.UserRepository;
 
-public class AuthServiceTest {
+public class UserServiceTest {
     private UserRepository userRepository;
-    private AuthService authService;
+    private UserService authService;
 
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
         String jwtSecret = "test-secret";
-        authService = new AuthService(userRepository, jwtSecret);
+        authService = new UserService(userRepository, jwtSecret);
     }
 
     @Test
@@ -45,7 +45,7 @@ public class AuthServiceTest {
                 0,
                 1000,
                 true,
-                LocalDateTime.now()
+                Instant.now()
         );
 
         when(userRepository.findByUsername(username)).thenReturn(Optional.of(bannedUser));
@@ -72,7 +72,7 @@ public class AuthServiceTest {
                 0,
                 1000,
                 false,
-                LocalDateTime.now()
+                Instant.now()
         );
 
         when(userRepository.findByUsername(username)).thenReturn(Optional.of(user));
@@ -108,7 +108,7 @@ public class AuthServiceTest {
                 0,
                 1000,
                 false,
-                LocalDateTime.now()
+                Instant.now()
         );
 
         when(userRepository.findByUsername(username)).thenReturn(Optional.of(existingUser));

@@ -21,9 +21,7 @@ public class ConnectionView extends VBox {
         title.getStyleClass().add("title-label");
 
         Label subtitle = new Label("Введіть дані для підключення");
-        subtitle.setStyle(
-                "-fx-text-fill: rgba(255,255,255,0.4); -fx-font-size: 13px;"
-        );
+        subtitle.getStyleClass().add("connection-subtitle");
 
         Label addressLabel = new Label("Адреса сервера");
         addressLabel.getStyleClass().add("stat-label");
@@ -62,7 +60,7 @@ public class ConnectionView extends VBox {
 
         Button connectButton = new Button("Підключитися");
         connectButton.getStyleClass().add("primary-button");
-        connectButton.setStyle("-fx-min-width: 240;");
+        connectButton.getStyleClass().add("connection-button");
 
         connectButton.setOnAction(_ -> {
             try {

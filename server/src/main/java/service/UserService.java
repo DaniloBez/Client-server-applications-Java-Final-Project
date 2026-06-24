@@ -17,11 +17,11 @@ import org.mindrot.jbcrypt.BCrypt;
 import repository.UserRepository;
 
 @Slf4j
-public class AuthService {
+public class UserService {
     private final UserRepository userRepository;
     private final Algorithm algorithm;
 
-    public AuthService(UserRepository userRepository, String jwtSecret) {
+    public UserService(UserRepository userRepository, String jwtSecret) {
         this.userRepository = userRepository;
         this.algorithm = Algorithm.HMAC256(jwtSecret);
     }

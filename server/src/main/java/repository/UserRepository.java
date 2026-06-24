@@ -314,7 +314,7 @@ public class UserRepository {
                 resultSet.getInt("match_count"),
                 resultSet.getInt("elo_rating"),
                 resultSet.getBoolean("is_banned"),
-                resultSet.getTimestamp("created_at").toLocalDateTime()
+                resultSet.getTimestamp("created_at").toInstant()
         );
     }
 

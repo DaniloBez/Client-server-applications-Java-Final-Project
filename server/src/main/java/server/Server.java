@@ -23,7 +23,7 @@ import repository.UserRepository;
 import sender.SenderNode;
 import server.session.ConnectionManager;
 import server.session.SessionRegistry;
-import service.AuthService;
+import service.UserService;
 import service.LobbyService;
 import service.game.GameManager;
 import utils.ServerSignals;
@@ -46,7 +46,7 @@ public class Server {
 
     private AtomicBoolean isTcpServerRun = new AtomicBoolean(false);
     private TcpServer tcpServer;
-    private final HttpAuthServer httpAuthServer;
+    private final HttpServer httpAuthServer;
 
     private final GameManager gameManager;
     private final LobbyService lobbyService;
@@ -92,8 +92,8 @@ public class Server {
         this.lobbyService = new LobbyService(this.gameManager);
         this.lobbyService.setMessageDispatcher(asyncDispatcher);
 
-        AuthService authService = new AuthService(userRepository, jwtSecret);
-        this.httpAuthServer = new HttpAuthServer(
+        UserService authService = new UserService(userRepository, jwtSecret);
+        this.httpAuthServer = new HttpServer(
                 httpPort,
                 authService,
                 this.connectionManager

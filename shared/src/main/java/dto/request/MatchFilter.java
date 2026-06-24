@@ -1,14 +1,14 @@
 package dto.request;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record MatchFilter(
         Integer userId1,
         Integer userId2,
         String status,
-        LocalDateTime startedAtFrom,
-        LocalDateTime startedAtTo,
-        LocalDateTime finishedAtFrom,
-        LocalDateTime finishedAtTo
+        Instant startedAtFrom,
+        Instant startedAtTo,
+        Instant finishedAtFrom,
+        Instant finishedAtTo
 ) {
 }

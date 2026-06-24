@@ -52,7 +52,7 @@ public class AdminPanelView extends StackPane {
         contentBox.setSpacing(15);
         contentBox.setAlignment(Pos.CENTER);
         contentBox.getStyleClass().add("container");
-        contentBox.setStyle("-fx-max-width: 920; -fx-max-height: 720;");
+        contentBox.getStyleClass().add("admin-content-box");
 
         setAlignment(Pos.CENTER);
 
@@ -129,9 +129,8 @@ public class AdminPanelView extends StackPane {
                 actionBtn.getStyleClass().add("secondary-button");
                 actionBtn.setOnAction(_ -> {
                     AdminUserResponse user = getItem();
-                    if (user != null) {
+                    if (user != null)
                         banUser(user.id(), !user.isBanned());
-                    }
                 });
             }
 
@@ -143,18 +142,12 @@ public class AdminPanelView extends StackPane {
                 else {
                     if (user.isBanned()) {
                         actionBtn.setText("Розблокувати");
-                        actionBtn.setStyle(
-                                "-fx-background-color: linear-gradient(to right, #51cf66, #40c057);"
-                                + " -fx-text-fill: white;"
-                                + " -fx-background-radius: 8; -fx-font-size: 12px;"
-                        );
+                        actionBtn.getStyleClass().removeAll("btn-ban", "btn-unban");
+                        actionBtn.getStyleClass().add("btn-unban");
                     } else {
                         actionBtn.setText("Заблокувати");
-                        actionBtn.setStyle(
-                                "-fx-background-color: linear-gradient(to right, #ff6b6b, #ee5a24);"
-                                + " -fx-text-fill: white;"
-                                + " -fx-background-radius: 8; -fx-font-size: 12px;"
-                        );
+                        actionBtn.getStyleClass().removeAll("btn-ban", "btn-unban");
+                        actionBtn.getStyleClass().add("btn-ban");
                     }
                     setGraphic(actionBtn);
                 }
