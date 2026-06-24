@@ -148,11 +148,28 @@ public class GameManager {
                 ));
             }
             case MATCH_WIN, MATCH_END -> {
-                log.info("Match {} finished (DRAW: {})", matchId, 
-                        result == MoveResult.MATCH_END);
+                boolean isDraw;
+                int matchWinnerId;
+                if (result == MoveResult.MATCH_WIN) {
+                    isDraw = false;
+                    matchWinnerId = userId;
+                } else {
+                    int player1 = gameSession.getPlayer1Id();
+                    int player2 = gameSession.getPlayer2Id();
+                    if (gameSession.getPlayer1Score() > gameSession.getPlayer2Score()) {
+                        isDraw = false;
+                        matchWinnerId = player1;
+                    } else if (gameSession.getPlayer2Score() > gameSession.getPlayer1Score()) {
+                        isDraw = false;
+                        matchWinnerId = player2;
+                    } else {
+                        isDraw = true;
+                        matchWinnerId = -1;
+                    }
+                }
+                log.info("Match {} finished (DRAW: {})", matchId, isDraw);
                 responses.addAll(buildMoveMessages(gameSession, userId, row, col));
-                boolean isDraw = (result == MoveResult.MATCH_END);
-                responses.addAll(handleMatchFinished(gameSession, isDraw ? -1 : userId));
+                responses.addAll(handleMatchFinished(gameSession, matchWinnerId));
             }
             default -> throw new IllegalStateException("Unexpected value: " + result);
         }

@@ -9,5 +9,6 @@ public class Commands {
     public static final int JOIN_LOBBY = 6;
     public static final int LEAVE_LOBBY = 7;
     public static final int AUTH_CONNECTION = 8;
+    public static final int BANNED = 10;
     public static final int PLAYER_DISCONNECTED = 99;
 }

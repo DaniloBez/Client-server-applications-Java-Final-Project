@@ -151,7 +151,9 @@ public class App extends Application {
     private void handleTcpMessage(Message message) {
         Platform.runLater(() -> {
             try {
-                if (currentGameView == null && message.getCommandId() != Commands.AUTH_CONNECTION)
+                if (currentGameView == null
+                        && message.getCommandId() != Commands.AUTH_CONNECTION
+                        && message.getCommandId() != Commands.BANNED)
                     return;
 
                 switch (message.getCommandId()) {
@@ -211,6 +213,19 @@ public class App extends Application {
                                 MatchEndedResponse.class
                         );
                         currentGameView.handleMatchEnded(match);
+                        break;
+                    case Commands.BANNED:
+                        StyledDialog.show(
+                                root,
+                                StyledDialog.DialogType.ERROR,
+                                "Обліковий запис заблоковано",
+                                "Ваш обліковий запис було заблоковано адміністратором.",
+                                () -> {
+                                    clientTcp.disconnect();
+                                    currentUser = null;
+                                    showAuthView();
+                                }
+                        );
                         break;
                     case Commands.INVALID_MOVE:
                         ErrorResponse err = mapper.readValue(

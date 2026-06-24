@@ -485,24 +485,24 @@
     -fx-font-weight: bold;
 }
 
-.game-cell-x {
-    -fx-font-size: 48px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #00cec9;
-}
-
-.game-cell-o {
+.game-cell-first {
     -fx-font-size: 48px;
     -fx-font-weight: bold;
     -fx-text-fill: #ff7675;
 }
 
-.game-status-win {
-    -fx-text-fill: #00cec9;
+.game-cell-second {
+    -fx-font-size: 48px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #6c5ce7;
 }
 
-.game-status-lose {
+.game-status-first {
     -fx-text-fill: #ff7675;
+}
+
+.game-status-second {
+    -fx-text-fill: #6c5ce7;
 }
 
 

@@ -144,6 +144,11 @@ public class Server {
                     message)
             );
         });
+        connectionManager.setOutboundDispatcher(message -> {
+            String connId = SessionRegistry.getConnectionId(message.getUserId());
+            if (connId != null)
+                responseQueue.offer(new NetworkMessage<>(connId, message));
+        });
         this.tcpServer = new TcpServer(port, connectionManager, isTcpServerRun, rawInputQueue);
         executorService.execute(tcpServer);
 

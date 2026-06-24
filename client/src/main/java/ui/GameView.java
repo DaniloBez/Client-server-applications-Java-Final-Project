@@ -26,6 +26,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 import protocols.ClientTcp;
@@ -43,6 +44,8 @@ public class GameView extends StackPane {
 
     private final Label statusLabel;
     private final Label scoreLabel;
+    private final HBox myScoreBox;
+    private final HBox opponentScoreBox;
     private final Label playersLabel;
 
     private final Button[][] buttons = new Button[3][3];
@@ -50,6 +53,7 @@ public class GameView extends StackPane {
 
     private boolean isMyTurn = false;
     private boolean isX = false;
+    private boolean amIFirst = false;
     private byte myScore = 0;
     private byte opponentScore = 0;
     private boolean isRoundTransition = false;
@@ -97,6 +101,14 @@ public class GameView extends StackPane {
         scoreLabel = new Label("0 : 0");
         scoreLabel.getStyleClass().add("game-score-label");
 
+        myScoreBox = new HBox(8);
+        myScoreBox.setAlignment(Pos.CENTER);
+        opponentScoreBox = new HBox(8);
+        opponentScoreBox.setAlignment(Pos.CENTER);
+
+        HBox scoreContainer = new HBox(20, myScoreBox, scoreLabel, opponentScoreBox);
+        scoreContainer.setAlignment(Pos.CENTER);
+
         statusLabel = new Label();
         statusLabel.getStyleClass().add("stat-label");
         statusLabel.getStyleClass().add("game-status-label");
@@ -126,7 +138,7 @@ public class GameView extends StackPane {
         }
 
         gameScreen.getChildren().addAll(
-                playersLabel, scoreLabel, statusBox, boardGrid
+                playersLabel, scoreContainer, statusBox, boardGrid
         );
 
         getChildren().addAll(waitingScreen, gameScreen);
@@ -224,6 +236,7 @@ public class GameView extends StackPane {
             );
             isX = response.isYouX();
             isMyTurn = response.isYourTurn();
+            amIFirst = response.isYourTurn();
             myScore = 0;
             opponentScore = 0;
             matchEnded = false;
@@ -244,10 +257,12 @@ public class GameView extends StackPane {
     public void handlePlayerMove(PlayerMoveResponse response) {
         Platform.runLater(() -> {
             boolean isMoveX = response.isX();
+            boolean isMyMove = (isMoveX == isX);
+            boolean isMoveByFirst = (isMyMove && amIFirst) || (!isMyMove && !amIFirst);
             Button button = buttons[response.row()][response.col()];
             button.setText(isMoveX ? "X" : "O");
-            button.getStyleClass().removeAll("game-cell-x", "game-cell-o");
-            button.getStyleClass().add(isMoveX ? "game-cell-x" : "game-cell-o");
+            button.getStyleClass().removeAll("game-cell-first", "game-cell-second");
+            button.getStyleClass().add(isMoveByFirst ? "game-cell-first" : "game-cell-second");
 
             ScaleTransition pop = new ScaleTransition(
                     Duration.millis(150), button
@@ -361,29 +376,55 @@ public class GameView extends StackPane {
     }
 
     private void updateScoreLabel() {
+        byte firstScore = amIFirst ? myScore : opponentScore;
+        byte secondScore = amIFirst ? opponentScore : myScore;
+
         scoreLabel.setText(
-                String.format("%d : %d", myScore, opponentScore)
+                String.format("%d : %d", firstScore, secondScore)
         );
+
+        myScoreBox.getChildren().clear();
+        for (int i = 0; i < 3; i++) {
+            Circle c = new Circle(6);
+            if (i < firstScore) {
+                c.setFill(Color.web("#ff7675"));
+            } else {
+                c.setFill(Color.TRANSPARENT);
+                c.setStroke(Color.web("#ff7675"));
+                c.setStrokeWidth(2);
+            }
+            myScoreBox.getChildren().add(c);
+        }
+
+        opponentScoreBox.getChildren().clear();
+        for (int i = 0; i < 3; i++) {
+            Circle c = new Circle(6);
+            if (i < secondScore) {
+                c.setFill(Color.web("#6c5ce7"));
+            } else {
+                c.setFill(Color.TRANSPARENT);
+                c.setStroke(Color.web("#6c5ce7"));
+                c.setStrokeWidth(2);
+            }
+            opponentScoreBox.getChildren().add(c);
+        }
     }
 
     private void updateStatusLabel() {
         if (!matchEnded) {
             String role = isX ? "X" : "O";
+            statusLabel.getStyleClass().removeAll(
+                    "game-status-first",
+                    "game-status-second",
+                    "game-status-label"
+            );
             if (isMyTurn) {
                 statusLabel.setText("🟢 Ваш хід (Ви " + role + ")");
-                statusLabel.getStyleClass().removeAll(
-                        "game-status-lose",
-                        "game-status-win",
-                        "game-status-label"
+                statusLabel.getStyleClass().add(
+                        amIFirst ? "game-status-first" : "game-status-second"
                 );
-                statusLabel.getStyleClass().add("game-status-win");
             } else {
                 statusLabel.setText("⏳ Хід суперника...");
-                statusLabel.getStyleClass().removeAll(
-                        "game-status-lose",
-                        "game-status-win",
-                        "game-status-label"
-                );
                 statusLabel.getStyleClass().add("game-status-label");
             }
         }
@@ -407,8 +448,8 @@ public class GameView extends StackPane {
             for (int col = 0; col < 3; col++) {
                 buttons[row][col].setText("");
                 buttons[row][col].getStyleClass().removeAll(
-                        "game-cell-x",
-                        "game-cell-o",
+                        "game-cell-first",
+                        "game-cell-second",
                         "game-cell-win"
                 );
                 buttons[row][col].setEffect(null);
