@@ -69,10 +69,8 @@ public class GameSession {
             incrementScore(playerId);
             gameCount++;
 
-            if (player1Score == 3 || player2Score == 3) {
-                gameCount++;
+            if (player1Score == 3 || player2Score == 3)
                 return MoveResult.MATCH_WIN;
-            }
 
             if (gameCount == 5)
                 return MoveResult.MATCH_END;

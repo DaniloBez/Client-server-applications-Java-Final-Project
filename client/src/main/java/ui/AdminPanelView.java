@@ -247,7 +247,7 @@ public class AdminPanelView extends StackPane {
         try {
             String nameLike = searchField.getText().isBlank()
                     ? null
-                    : "%" + searchField.getText() + "%";
+                    : searchField.getText();
             String role = "Всі ролі".equals(roleFilter.getValue()) ? null : roleFilter.getValue();
             
             Boolean isBanned = null;

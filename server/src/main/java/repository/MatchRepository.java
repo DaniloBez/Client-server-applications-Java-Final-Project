@@ -106,16 +106,16 @@ public class MatchRepository {
                     .whereEqual("status", filter.status())
                     .whereGreaterOrEqual("started_at", filter.startedAtFrom())
                     .whereLessOrEqual("started_at", filter.startedAtTo())
-                    .whereGreaterOrEqual("finished_at", filter.finishedAtFrom())
-                    .whereLessOrEqual("finished_at", filter.finishedAtTo());
+                    .whereGreaterOrEqual("ended_at", filter.finishedAtFrom())
+                    .whereLessOrEqual("ended_at", filter.finishedAtTo());
 
             countBuilder.whereAnyColumnEqual(filter.userId1(), "player1_id", "player2_id")
                     .whereAnyColumnEqual(filter.userId2(), "player1_id", "player2_id")
                     .whereEqual("status", filter.status())
                     .whereGreaterOrEqual("started_at", filter.startedAtFrom())
                     .whereLessOrEqual("started_at", filter.startedAtTo())
-                    .whereGreaterOrEqual("finished_at", filter.finishedAtFrom())
-                    .whereLessOrEqual("finished_at", filter.finishedAtTo());
+                    .whereGreaterOrEqual("ended_at", filter.finishedAtFrom())
+                    .whereLessOrEqual("ended_at", filter.finishedAtTo());
         }
 
         if (sorting != null && sorting.column() != null) {
