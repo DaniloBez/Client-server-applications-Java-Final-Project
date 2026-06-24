@@ -2,6 +2,7 @@ package receiver;
 
 import dto.NetworkMessage;
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -39,6 +40,10 @@ public class TcpReceiver implements Runnable {
                 headerBuffer.position(10);
                 int payloadSize = headerBuffer.getInt();
 
+                if (payloadSize < 0 || payloadSize > 1024 * 1024) {
+                    throw new IOException("Invalid payload size: " + payloadSize);
+                }
+
                 int remainingSize = 2 + payloadSize + 2;
                 byte[] remainingData = new byte[remainingSize];
 
@@ -72,7 +77,7 @@ public class TcpReceiver implements Runnable {
     }
 
     private boolean isGracefulDisconnect(Exception e, String errorMessage) {
-        if (e instanceof java.io.EOFException)
+        if (e instanceof EOFException)
             return true;
 
         if (errorMessage == null)

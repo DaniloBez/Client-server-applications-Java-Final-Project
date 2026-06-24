@@ -17,11 +17,11 @@ import org.mindrot.jbcrypt.BCrypt;
 import repository.UserRepository;
 
 @Slf4j
-public class AuthService {
+public class UserService {
     private final UserRepository userRepository;
     private final Algorithm algorithm;
 
-    public AuthService(UserRepository userRepository, String jwtSecret) {
+    public UserService(UserRepository userRepository, String jwtSecret) {
         this.userRepository = userRepository;
         this.algorithm = Algorithm.HMAC256(jwtSecret);
     }
@@ -69,7 +69,15 @@ public class AuthService {
                     .withIssuer("game-server")
                     .build();
             DecodedJWT jwt = verifier.verify(token);
-            return Integer.parseInt(jwt.getSubject());
+            int userId = Integer.parseInt(jwt.getSubject());
+            
+            Optional<User> user = userRepository.getUser(userId);
+            if (user.isEmpty() || user.get().isBanned()) {
+                log.warn("User {} is banned or does not exist", userId);
+                return -1;
+            }
+            
+            return userId;
         } catch (JWTVerificationException exception) {
             log.warn("Invalid JWT token: {}", exception.getMessage());
             return -1;
@@ -109,5 +117,9 @@ public class AuthService {
 
     public void setBannedStatus(long userId, boolean status) {
         userRepository.setBannedStatus(userId, status);
+        if (status)
+            log.info("User {} has been banned", userId);
+        else
+            log.info("User {} has been unbanned", userId);
     }
 }

@@ -58,22 +58,18 @@ public class AuthView extends StackPane {
 
         Button loginButton = new Button("Увійти");
         loginButton.getStyleClass().add("primary-button");
-        loginButton.setStyle("-fx-min-width: 240;");
+        loginButton.getStyleClass().add("auth-button");
 
         Label orLabel = new Label("або");
-        orLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.4); -fx-font-size: 12px;");
+        orLabel.getStyleClass().add("auth-or-label");
 
         Button registerButton = new Button("Створити акаунт");
         registerButton.getStyleClass().add("secondary-button");
-        registerButton.setStyle(
-                "-fx-min-width: 240;"
-                + " -fx-border-color: rgba(108, 92, 231, 0.4);"
-                + " -fx-text-fill: #a29bfe;"
-        );
+        registerButton.getStyleClass().add("auth-register-button");
 
         Button backButton = new Button("← Назад");
         backButton.getStyleClass().add("secondary-button");
-        backButton.setStyle("-fx-min-width: 140; -fx-pref-width: 140;");
+        backButton.getStyleClass().add("auth-back-button");
         backButton.setOnAction(e -> onBack.run());
 
         loginButton.setOnAction(e -> {

@@ -74,14 +74,14 @@ public class ProcessorNode implements Runnable {
                         );
 
                         List<Message> disconnectResults = processor.process(netMsg);
-                        routeMessages(disconnectResults);
+                        routeMessages(disconnectResults, inputMessage.connectionId());
                     }
                     SessionRegistry.remove(inputMessage.connectionId());
                     continue;
                 }
 
                 List<Message> resultMessages = processor.process(inputMessage);
-                routeMessages(resultMessages);
+                routeMessages(resultMessages, inputMessage.connectionId());
             }
         } catch (InterruptedException e) {
             log.info(
@@ -93,12 +93,13 @@ public class ProcessorNode implements Runnable {
         }
     }
 
-    private void routeMessages(List<Message> messages) throws InterruptedException {
+    private void routeMessages(List<Message> messages, String originalConnectionId) throws InterruptedException {
         for (Message message : messages) {
             String targetConnId = SessionRegistry.getConnectionId(message.getUserId());
-            if (targetConnId != null) {
+            String finalConnId = targetConnId != null ? targetConnId : originalConnectionId;
+            if (finalConnId != null) {
                 NetworkMessage<Message> outputMessage = new NetworkMessage<>(
-                        targetConnId,
+                        finalConnId,
                         message
                 );
                 outputQueue.put(outputMessage);

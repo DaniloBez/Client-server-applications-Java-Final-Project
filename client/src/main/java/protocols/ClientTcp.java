@@ -159,16 +159,20 @@ public class ClientTcp implements Client {
                 System.arraycopy(header, 0, fullData, 0, 14);
                 System.arraycopy(remainingData, 0, fullData, 14, remainingSize);
 
-                Message message = decryptor.decrypt(fullData);
-                if (onMessageReceived != null)
-                    onMessageReceived.accept(message);
+                try {
+                    Message message = decryptor.decrypt(fullData);
+                    if (onMessageReceived != null)
+                        onMessageReceived.accept(message);
 
-                log.info(
-                        "Received message from TCP Server {}:{}: {}",
-                        socket.getInetAddress().getHostName(),
-                        socket.getPort(),
-                        message
-                );
+                    log.info(
+                            "Received message from TCP Server {}:{}: {}",
+                            socket.getInetAddress().getHostName(),
+                            socket.getPort(),
+                            message
+                    );
+                } catch (Exception ex) {
+                    log.error("Failed to decrypt message from server", ex);
+                }
             }
         } catch (IOException e) {
             synchronized (stateLock) {

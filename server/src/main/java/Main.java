@@ -7,7 +7,7 @@ import org.flywaydb.core.Flyway;
 import repository.MatchRepository;
 import repository.UserRepository;
 import server.Server;
-import service.AuthService;
+import service.UserService;
 import utils.DbConnectionPool;
 
 public class Main {
@@ -35,7 +35,7 @@ public class Main {
             );
 
             UserRepository repo = new UserRepository(pool);
-            AuthService auth = new AuthService(
+            UserService auth = new UserService(
                     repo,
                     jwtSecret != null
                             ? jwtSecret

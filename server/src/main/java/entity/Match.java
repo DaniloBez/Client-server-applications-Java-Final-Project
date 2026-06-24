@@ -1,6 +1,6 @@
 package entity;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +20,8 @@ public class Match {
     private int user2Score = 0;
     private Integer winnerId = null;
     private MatchStatus status = MatchStatus.IN_PROGRESS;
-    private LocalDateTime startedAt = LocalDateTime.now();
-    private LocalDateTime finishedAt;
+    private Instant startedAt = Instant.now();
+    private Instant finishedAt;
 
     public Match(
             long id,

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import server.session.SessionRegistry;
-import service.AuthService;
+import service.UserService;
 import service.LobbyService;
 import service.game.GameManager;
 import tools.jackson.databind.DeserializationFeature;
@@ -25,9 +25,9 @@ public class Processor implements ProcessorInterface {
     private final JsonMapper mapper;
     private final LobbyService lobbyService;
     private final GameManager gameManager;
-    private final AuthService authService;
+    private final UserService authService;
 
-    public Processor(LobbyService lobbyService, GameManager gameManager, AuthService authService) {
+    public Processor(LobbyService lobbyService, GameManager gameManager, UserService authService) {
         this.lobbyService = lobbyService;
         this.gameManager = gameManager;
         this.authService = authService;

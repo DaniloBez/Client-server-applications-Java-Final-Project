@@ -31,7 +31,7 @@ public class LeaderboardView extends VBox {
 
         Label subtitle = new Label("Топ 10 найкращих гравців");
         subtitle.getStyleClass().add("stat-label");
-        subtitle.setStyle("-fx-font-size: 13px; -fx-text-fill: rgba(255,255,255,0.45);");
+        subtitle.getStyleClass().add("leaderboard-subtitle");
 
         TableView<LeaderboardEntry> table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
@@ -41,25 +41,37 @@ public class LeaderboardView extends VBox {
                 cell -> new SimpleIntegerProperty(cell.getValue().rank()).asObject()
         );
         rankCol.setMaxWidth(70);
-        // Custom cell for medal icons on top 3
-        rankCol.setCellFactory(col -> new TableCell<>() {
+        rankCol.setCellFactory(_ -> new TableCell<>() {
             @Override
             protected void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
+                    getStyleClass().removeAll(
+                            "rank-cell",
+                            "rank-gold",
+                            "rank-silver",
+                            "rank-bronze",
+                            "rank-other"
+                    );
                 } else {
-                    int index = getIndex() + 1;
-                    String medal = switch (index) {
-                        case 1 -> "🥇";
-                        case 2 -> "🥈";
-                        case 3 -> "🥉";
-                        default -> String.valueOf(index);
-                    };
-                    setText(medal);
-                    setStyle(item <= 3
-                            ? "-fx-font-size: 18px; -fx-alignment: CENTER;"
-                            : "-fx-alignment: CENTER;");
+                    setText(String.valueOf(item));
+                    getStyleClass().removeAll(
+                            "rank-cell",
+                            "rank-gold",
+                            "rank-silver",
+                            "rank-bronze",
+                            "rank-other"
+                    );
+                    getStyleClass().add("rank-cell");
+                    if (item == 1)
+                        getStyleClass().add("rank-gold");
+                    else if (item == 2)
+                        getStyleClass().add("rank-silver");
+                    else if (item == 3)
+                        getStyleClass().add("rank-bronze");
+                    else
+                        getStyleClass().add("rank-other");
                 }
             }
         });
@@ -73,16 +85,16 @@ public class LeaderboardView extends VBox {
         eloCol.setCellValueFactory(
                 cell -> new SimpleIntegerProperty(cell.getValue().eloRating()).asObject()
         );
-        eloCol.setCellFactory(col -> new TableCell<>() {
+        eloCol.setCellFactory(_ -> new TableCell<>() {
             @Override
             protected void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
-                    setStyle("");
+                    getStyleClass().removeAll("leaderboard-elo");
                 } else {
                     setText(String.valueOf(item));
-                    setStyle("-fx-text-fill: #a29bfe; -fx-font-weight: bold;");
+                    getStyleClass().add("leaderboard-elo");
                 }
             }
         });

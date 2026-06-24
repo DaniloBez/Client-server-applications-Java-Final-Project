@@ -43,28 +43,24 @@ public class PlayerMenuView extends VBox {
 
         Button startButton = new Button("▶ Почати гру");
         startButton.getStyleClass().add("primary-button");
-        startButton.setStyle("-fx-font-size: 18px; -fx-min-width: 240; -fx-min-height: 50;");
+        startButton.getStyleClass().add("menu-start-button");
         startButton.setOnAction(_ -> onStartGame.run());
 
         Button leaderboardButton = new Button("🏆 Рейтинг гравців");
         leaderboardButton.getStyleClass().add("primary-button");
-        leaderboardButton.setStyle("-fx-min-width: 240;");
+        leaderboardButton.getStyleClass().add("menu-button");
         leaderboardButton.setOnAction(_ -> onShowLeaderboard.run());
 
         Button adminButton = new Button("Панель Адміністратора");
         adminButton.getStyleClass().add("secondary-button");
-        adminButton.setStyle(
-                "-fx-background-color: linear-gradient(to right, #f39c12, #e67e22);"
-                + " -fx-text-fill: white; -fx-min-width: 240;"
-                + " -fx-effect: dropshadow(gaussian, rgba(243,156,18,0.4), 10, 0, 0, 3);"
-        );
+        adminButton.getStyleClass().add("menu-admin-button");
         adminButton.setOnAction(_ -> onShowAdminPanel.run());
         adminButton.setVisible("ADMIN".equalsIgnoreCase(user.role()));
         adminButton.setManaged("ADMIN".equalsIgnoreCase(user.role()));
 
         Button logoutButton = new Button("← Вийти з акаунта");
         logoutButton.getStyleClass().add("secondary-button");
-        logoutButton.setStyle("-fx-min-width: 240;");
+        logoutButton.getStyleClass().add("menu-button");
         logoutButton.setOnAction(_ -> onLogout.run());
 
         getChildren().addAll(welcomeLabel, statsBox, startButton, leaderboardButton);

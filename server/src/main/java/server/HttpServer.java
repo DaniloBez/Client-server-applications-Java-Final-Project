@@ -1,7 +1,6 @@
 package server;
 
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
 import dto.request.BanRequest;
 import dto.request.FindUsersRequest;
 import dto.request.UserRequest;
@@ -17,24 +16,23 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import lombok.extern.slf4j.Slf4j;
 import server.session.ConnectionManager;
-import service.AuthService;
+import service.UserService;
 import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
-public class HttpAuthServer {
+public class HttpServer {
     private final int port;
-    private final AuthService authService;
+    private final UserService authService;
     private final ConnectionManager connectionManager;
     private final JsonMapper mapper = JsonMapper.builder().build();
-    private HttpServer httpServer;
+    private com.sun.net.httpserver.HttpServer httpServer;
 
-    public HttpAuthServer(int port, AuthService authService, ConnectionManager connectionManager) {
+    public HttpServer(int port, UserService authService, ConnectionManager connectionManager) {
         this.port = port;
         this.authService = authService;
         this.connectionManager = connectionManager;
@@ -43,7 +41,7 @@ public class HttpAuthServer {
     public void start() {
         try {
             log.info("Starting HTTP Auth Server on port {}", port);
-            httpServer = HttpServer.create(new InetSocketAddress(port), 1000);
+            httpServer = com.sun.net.httpserver.HttpServer.create(new InetSocketAddress(port), 1000);
             httpServer.setExecutor(Executors.newFixedThreadPool(10));
             
             httpServer.createContext("/login", this::loginHandler);
@@ -256,7 +254,8 @@ public class HttpAuthServer {
 
             PageResponse<entity.User> usersPage = authService.getUsers(searchRequest);
             java.util.List<Integer> activeUserIds = connectionManager.getActiveUserIds();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+                    .withZone(java.time.ZoneId.systemDefault());
 
             List<AdminUserResponse> adminUserResponses = usersPage.items().stream()
                     .map(user -> new AdminUserResponse(
@@ -266,7 +265,7 @@ public class HttpAuthServer {
                             user.getMatchCount(),
                             user.getEloRating(),
                             user.getCreatedAt() != null
-                                    ? user.getCreatedAt().format(formatter) : "Н/Д",
+                                    ? formatter.format(user.getCreatedAt()) : "Н/Д",
                             user.isBanned()
                     ))
                     .collect(java.util.stream.Collectors.toList());

@@ -14,7 +14,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import utils.DbConnectionPool;
@@ -155,8 +155,8 @@ public class MatchRepository {
                 try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     while (resultSet.next()) {
                         Timestamp endedAtTs = resultSet.getTimestamp("ended_at");
-                        LocalDateTime endedAt = (endedAtTs != null)
-                                ? endedAtTs.toLocalDateTime()
+                        Instant endedAt = (endedAtTs != null)
+                                ? endedAtTs.toInstant()
                                 : null;
 
                         matches.add(new Match(
@@ -169,7 +169,7 @@ public class MatchRepository {
                                         ? resultSet.getInt("winner_id")
                                         : null,
                                 MatchStatus.valueOf(resultSet.getString("status")),
-                                resultSet.getTimestamp("started_at").toLocalDateTime(),
+                                resultSet.getTimestamp("started_at").toInstant(),
                                 endedAt
                         ));
                     }
