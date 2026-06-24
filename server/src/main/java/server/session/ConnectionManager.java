@@ -17,6 +17,9 @@ public class ConnectionManager {
     @Setter
     private Consumer<Message> messageDispatcher;
 
+    @Setter
+    private Consumer<Message> outboundDispatcher;
+
     public void addConnection(String connectionId, Sender sender) {
         activeConnections.put(connectionId, sender);
         log.info("Added connection with id {}", connectionId);
@@ -58,12 +61,29 @@ public class ConnectionManager {
     public void disconnect(int userId) {
         String connectionId = SessionRegistry.getConnectionId(userId);
         if (connectionId != null) {
-            Sender sender = activeConnections.get(connectionId);
-            if (sender != null)
-                sender.close();
+            if (outboundDispatcher != null) {
+                Message banMessage = new Message(
+                        (byte) 0,
+                        System.currentTimeMillis(),
+                        Commands.BANNED,
+                        userId,
+                        ""
+                );
+                outboundDispatcher.accept(banMessage);
+            }
 
-            removeConnection(connectionId);
-            log.info("Disconnected user {}", userId);
+            Sender sender = activeConnections.get(connectionId);
+            if (sender != null) {
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(500);
+                    } catch (Exception ignored) {
+                    }
+                    sender.close();
+                }).start();
+            }
+
+            log.info("Initiated disconnect for banned user {}", userId);
         }
     }
 
