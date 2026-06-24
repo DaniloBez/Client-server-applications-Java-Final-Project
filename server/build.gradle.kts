@@ -25,7 +25,7 @@ dependencies {
     implementation("org.flywaydb:flyway-core:12.8.1")
     runtimeOnly("org.flywaydb:flyway-database-postgresql:12.8.1")
     runtimeOnly("org.postgresql:postgresql:42.7.11")
-    implementation("com.auth0:java-jwt:4.4.0")
+    implementation("com.auth0:java-jwt:4.5.2")
     implementation("org.mindrot:jbcrypt:0.4")
     testImplementation("org.assertj:assertj-core:4.0.0-M1")
     testImplementation("org.testcontainers:testcontainers:2.0.5")
