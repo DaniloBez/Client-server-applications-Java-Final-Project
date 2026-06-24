@@ -39,6 +39,10 @@ public class TcpReceiver implements Runnable {
                 headerBuffer.position(10);
                 int payloadSize = headerBuffer.getInt();
 
+                if (payloadSize < 0 || payloadSize > 1024 * 1024) {
+                    throw new IOException("Invalid payload size: " + payloadSize);
+                }
+
                 int remainingSize = 2 + payloadSize + 2;
                 byte[] remainingData = new byte[remainingSize];
 
